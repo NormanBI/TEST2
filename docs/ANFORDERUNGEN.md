@@ -179,6 +179,17 @@ SMTP-Einstellungen liegen in MySQL (Tabelle `MailEinstellungen`, Singleton-Daten
 - Kann das Passwort nicht entschlüsselt werden (z. B. Schlüsselbund fehlt), wird fail-closed gemeldet (Statusseite bzw. HTTP 503 auf der Bearbeitungsseite) und der Datensatz nie überschrieben. Ist der SMTP-Server vorübergehend nicht erreichbar, bleiben die Einstellungen unverändert und die Anwendung läuft weiter; nur der Test schlägt fehl.
 - Bekannte Grenzen: Erreichbarkeit des Mailservers wird nicht beim Start geprüft; `Aktiv` wird derzeit immer auf Ja gesetzt; kein Test mit echtem SMTP-/MySQL-Server in CI; nur Einzelinstanzbetrieb.
 
+### F-013 – Navigationstext (Tabelle `Einstellungen`)
+
+Der Text oben links in der Navigation (Standard „Kanzlei-Prototyp“) wird in MySQL (Tabelle `Einstellungen`) gespeichert und unter Einstellungen > Layout (nur Administration) bearbeitet. Weitere Einstellungen sind nicht Teil dieser Anforderung; das Passwort-Zurücksetzen bleibt ausgenommen.
+
+**Abnahmekriterien:**
+- Tabelle `Einstellungen`: Singleton-Datensatz (`Id = 1`, Check-Constraint `CK_Einstellungen_Singleton`) mit `Navigationstext` (max. 80 Zeichen), `ErstelltAm`, `GeaendertAm` (UTC). Migration `AddEinstellungen` (additiv, kein `DROP`).
+- Ohne Datensatz (oder bei Datenbankfehler) gilt der Standardtext „Kanzlei-Prototyp“. Der Datensatz wird nach den Migrationen idempotent angelegt, ohne die Reihenfolge Datenbank → Mailserver → erster Administrator → Anmeldung zu verändern; ein Fehler dabei blockiert die Einrichtung nicht.
+- Validierung serverseitig: Pflichtfeld, Leerraum an den Rändern wird entfernt, höchstens 80 Zeichen, keine Steuerzeichen, kein Markup (`<`, `>`, `&`); deutsche Fehlermeldungen (HTTP 400, nichts wird gespeichert). Die Ausgabe wird HTML-kodiert.
+- `POST /Einstellungen/Navigationstext` ist nur für Administration erreichbar (Nicht-Administration: `/Account/AccessDenied`, Anonyme: Anmeldung) und per Anti-Forgery geschützt; es gibt keine öffentliche Bearbeitungsroute.
+- Der Wert wird in einem Singleton-Dienst zwischengespeichert (keine Datenbankabfrage je Seitenaufruf), beim Speichern aktualisiert und überlebt Neustarts. Einzelinstanz-Annahme.
+
 ## 6. Demo-Abnahmeszenario
 
 1. Demo-Administration anmelden.
@@ -227,6 +238,7 @@ Bei jeder Anforderungsänderung wird ein neuer Eintrag mit Datum und Dokumentver
 | 1.4 | 2026-10-11 | MySQL-Anbindung: Ersteinrichtung vor der Anmeldung, Test-vor-Speichern, Passwort per Data Protection verschlüsselt in `App_Data/db-settings.json` mit persistiertem Schlüsselbund, EF-Core-Kontext (Pomelo 8.0.3) mit initialer Migration, automatische Migration beim Start, Status-/Wiederherstellungsseite. Ergänzt F-007 (Datenbank für spätere Fachdaten; Demo-Benutzer und Theme-Datei unverändert). Nur Einzelinstanzbetrieb. | F-007, F-010 |
 | 1.5 | 2026-10-11 | Benutzerverwaltung: Tabelle `Benutzer` (Migration `AddBenutzer`), Passwort als gesalzener Einweg-Hash statt umkehrbarer Verschlüsselung, Ersteinrichtung des ersten Administrators über `/Setup/Admin` (keine festen Zugangsdaten), Anmeldung gegen die Datenbank, Menü Einstellungen > Benutzer, Deaktivieren statt Löschen, Schutz des letzten Administrators, Sitzungsende bei Deaktivierung. Löst die festen Demo-Benutzer aus v1.1 (F-001) ab; frühere Einträge bleiben unverändert. | F-001, F-004, F-007, F-011 |
 | 1.6 | 2026-10-11 | Mailserver-Einstellungen: Tabelle `MailEinstellungen` (Migration `AddMailEinstellungen`), Ersteinrichtung `/Setup/Mail` zwischen Datenbank und Administrator, Test-vor-Speichern (MailKit), Passwort per Data Protection verschlüsselt, Einstellungen > Mailserver (nur Administration), fail-closed bei nicht entschlüsselbarem Passwort. Kein Passwort-Zurücksetzen. | F-010, F-011, F-012 |
+| 1.7 | 2026-10-11 | Navigationstext: Tabelle `Einstellungen` (Migration `AddEinstellungen`, Singleton), Standard „Kanzlei-Prototyp“, Bearbeitung unter Einstellungen > Layout (nur Administration), serverseitige Validierung, HTML-Kodierung, zwischengespeicherte Anzeige in der gemeinsamen Navigation, Fallback auf Standardtext. Kein Passwort-Zurücksetzen. | F-009, F-013 |
 
 ### Vorlage für künftige Änderungsprotokolleinträge
 

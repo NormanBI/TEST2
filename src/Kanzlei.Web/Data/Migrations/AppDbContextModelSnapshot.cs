@@ -99,6 +99,30 @@ namespace Kanzlei.Web.Data.Migrations
                     b.ToTable("Benutzer", (string)null);
                 });
 
+            modelBuilder.Entity("Kanzlei.Web.Data.Einstellungen", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("ErstelltAm")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("GeaendertAm")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Navigationstext")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("varchar(80)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Einstellungen", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Einstellungen_Singleton", "`Id` = 1");
+                        });
+                });
+
             modelBuilder.Entity("Kanzlei.Web.Data.MailEinstellungen", b =>
                 {
                     b.Property<int>("Id")

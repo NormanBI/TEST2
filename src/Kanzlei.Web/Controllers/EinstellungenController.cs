@@ -14,16 +14,42 @@ public class EinstellungenController : Controller
 
     private readonly IMailSettingsStore _mail;
     private readonly IMailConnectionTester _mailTester;
+    private readonly IBrandingService _branding;
 
-    public EinstellungenController(IThemeService theme, IMailSettingsStore mail, IMailConnectionTester mailTester)
+    public EinstellungenController(IThemeService theme, IMailSettingsStore mail, IMailConnectionTester mailTester, IBrandingService branding)
     {
-        _theme = theme; _mail = mail; _mailTester = mailTester;
+        _theme = theme; _mail = mail; _mailTester = mailTester; _branding = branding;
     }
 
     public IActionResult Index() => View();
 
     [HttpGet]
-    public IActionResult Layout() => View(new LayoutViewModel(_theme.Current));
+    public async Task<IActionResult> Layout(CancellationToken ct) =>
+        View(new LayoutViewModel(_theme.Current) { Navigationstext = await _branding.GetBrandTextAsync(ct) });
+
+    // Navigationstext (oben links): nur Administration (Klassen-Attribut), POST per globalem Antiforgery-Filter geschützt.
+    [HttpPost]
+    public async Task<IActionResult> Navigationstext(string? navigationstext, CancellationToken ct)
+    {
+        if (!BrandingValidation.TryNormalize(navigationstext, out _, out var error))
+            return BrandingError(navigationstext, error!, StatusCodes.Status400BadRequest);
+        var saved = await _branding.SaveAsync(navigationstext, ct);
+        if (saved == BrandingSaveResult.Invalid)
+            return BrandingError(navigationstext, "Der Text ist ungültig.", StatusCodes.Status400BadRequest);
+        if (saved != BrandingSaveResult.Ok)
+            return BrandingError(navigationstext, "Der Text konnte nicht gespeichert werden; der bisherige Text bleibt aktiv.", StatusCodes.Status503ServiceUnavailable);
+        TempData["Success"] = "Der Navigationstext wurde gespeichert. Er gilt für alle Benutzer und bleibt nach einem Neustart erhalten.";
+        return RedirectToAction(nameof(Layout));
+    }
+
+    private IActionResult BrandingError(string? submitted, string error, int status)
+    {
+        Response.StatusCode = status;
+        return View("Layout", new LayoutViewModel(_theme.Current)
+        {
+            Navigationstext = submitted ?? "", NavigationstextError = error,
+        });
+    }
 
     [HttpPost]
     public IActionResult Layout(Dictionary<string, string?> values)
