@@ -32,7 +32,7 @@ Nicht enthalten:
 - Funktionale Stammdatenverwaltung, Auswertungen oder Einstellungen.
 - Kalendertermine und persistente Kalenderdaten.
 - Mandanten-Zugänge bzw. die Rolle Mandant.
-- Einstellbare und gespeicherte Farben.
+- Dauerhaft gespeicherte Farben (seit v1.2 sind Farben durch Administration änderbar, aber nur im Arbeitsspeicher, siehe F-009).
 - Einsatz mit echten Kanzlei- oder Mandantendaten bzw. produktionsreifer Betrieb.
 
 ## 3. Technische Vorgaben
@@ -125,6 +125,20 @@ Der erste Prototyp verwendet Standardfarben.
 **Abnahmekriterien:**
 - Eine Auswahl oder Speicherung eigener Farbthemen ist nicht erforderlich.
 
+### F-009 – Layout-Editor (Farbthema) für Administration
+
+Unter **Einstellungen > Layout** (`/Einstellungen/Layout`) kann die Administration die Farben der Anwendung über semantische CSS-Variablen ändern. Diese Anforderung erweitert F-008 (Standardfarben bleiben die Voreinstellung) und löst die Abgrenzung „Einstellbare Farben nicht enthalten“ für den flüchtigen Fall ab.
+
+**Abnahmekriterien:**
+- Verschachtelter Menüpunkt **Einstellungen > Layout** nur für die Rolle Administration sichtbar. Serverseitig erzwungen: `GET`/`POST` auf `/Einstellungen/Layout` und `/Einstellungen/LayoutReset` sind für Nicht-Administration nicht erreichbar (Weiterleitung zu `/Account/AccessDenied`, HTTP 403), für Anonyme Weiterleitung zur Anmeldung. POST-Aktionen sind per Anti-Forgery-Token geschützt.
+- Deutsche, responsive Seite mit Beschriftung, Farbwähler und Hex-Eingabe je Token, sichtbarem Fokus, Live-Vorschau und Kontrasthinweis (Haupttext zu Hintergrund/Fläche, empfohlen ≥ 4,5:1; nur Hinweis, keine Sperre).
+- Farbpalette (Token → CSS-Variable, Standardwert): Primär `--app-primary` `#1f4e79`; Sekundär/Akzent `--app-accent` `#2a7f9e`; Seitenhintergrund `--app-background` `#f5f7fa`; Fläche/Karte `--app-surface` `#ffffff`; Haupttext `--app-text` `#212529`; gedämpfter Text `--app-muted` `#5c636a`; Rahmen/Trenner `--app-border` `#dee2e6`; Link `--app-link` `#0b5ed7`; Erfolg `--app-success` `#198754`; Warnung `--app-warning` `#ffc107`; Fehler/Gefahr `--app-danger` `#dc3545`; Fokusmarkierung `--app-focus` `#0d6efd`; Kalender heute/Auswahl `--app-calendar` `#1f4e79`. Die Kontrastfarben auf Primär/Kalender (`--app-primary-contrast`, `--app-calendar-contrast`) werden automatisch berechnet.
+- Validierung strikt: nur `#rrggbb` (Hex, 6 Stellen). Ungültige oder fehlende Werte werden abgelehnt (HTTP 400, Fehlermeldung am Feld); das bisherige Thema bleibt vollständig unverändert.
+- Auslieferung: Die Farben werden als `:root`-CSS-Variablen über `/theme.css` (dynamisch, nicht gecacht, nur validierte Hex-Werte) für alle Benutzer inkl. Anmeldeseite ausgeliefert. `wwwroot/css/site.css` wird nie zur Laufzeit geschrieben und verwendet nur die Variablen; Syncfusion-Kalender (heute/Auswahl, Fläche, Text) nutzen die Variablen.
+- **Keine dauerhafte Speicherung:** „Übernehmen“ speichert das Thema nur im Arbeitsspeicher des laufenden Prozesses, gemeinsam für alle Benutzer. Nach Neustart der Anwendung gelten wieder die Standardfarben. UI und Dokumentation weisen darauf hin. Keine Datenbank, keine Datei.
+- **Zurücksetzen:** „Auf Standard zurücksetzen“ stellt sofort alle Standardwerte (siehe Palette) für alle Benutzer wieder her.
+- Automatisierte Tests: Autorisierung (inkl. Direktzugriff Nicht-Administration), Farbvalidierung, Anwenden/Zurücksetzen, CSS-/Theme-Auslieferung (`tests/Kanzlei.Web.Tests/ThemeTests.cs`).
+
 ## 6. Demo-Abnahmeszenario
 
 1. Demo-Administration anmelden.
@@ -168,6 +182,7 @@ Bei jeder Anforderungsänderung wird ein neuer Eintrag mit Datum und Dokumentver
 | 1.0 | 11. Oktober 2026 | Anforderungen zusammengeführt, IDs und Abnahmekriterien ergänzt, Umfang des ersten Prototyps abgegrenzt und Demo-Abnahmeszenario dokumentiert. |
 
 | 1.1 | 2026-10-11 | Prototyp umgesetzt (siehe README). Entscheidungen zu Abschnitt 8: Demo-Zugänge `admin`, `steuerberater`, `sachbearbeiter` (Passwörter im README); Cookie-Authentifizierung mit festen Demo-Benutzern und serverseitiger Rollenprüfung; Kalender = Syncfusion `ejs-calendar` ohne Termine; Platzhaltertext „Platzhalter – diese Funktion ist im ersten Prototyp noch nicht umgesetzt.“; Standardfarben Primär `#1f4e79`, Hintergrund `#f5f7fa`, Text `#212529`. | F-001 bis F-009 |
+| 1.2 | 2026-10-11 | Layout-Editor unter Einstellungen > Layout (nur Administration): semantische CSS-Variablen, strikte Hex-Validierung, Übernehmen/Zurücksetzen, gemeinsames Thema ausschließlich im Arbeitsspeicher (Reset bei Neustart, bewusst keine Datenbank, kein Schreiben in wwwroot). Ablösung der Abgrenzung „Einstellbare und gespeicherte Farben“ für den flüchtigen Fall; dauerhafte Speicherung bleibt später. | F-004, F-008, F-009 |
 
 ### Vorlage für künftige Änderungsprotokolleinträge
 

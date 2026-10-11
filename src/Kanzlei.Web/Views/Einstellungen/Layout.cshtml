@@ -1,0 +1,78 @@
+@model LayoutViewModel
+@inject IThemeService Theme
+@{
+    ViewData["Title"] = "Layout";
+}
+
+<h1 class="h3">Einstellungen – Layout</h1>
+<div class="alert alert-info" role="note">
+    Die Farben werden nur im Arbeitsspeicher der laufenden Anwendung gehalten und gelten für alle angemeldeten Benutzer.
+    Es gibt keine dauerhafte Speicherung: Nach einem Neustart der Anwendung gelten wieder die Standardfarben.
+</div>
+@if (TempData["Success"] is string ok)
+{
+    <div class="alert alert-success" role="status">@ok</div>
+}
+@if (Model.Errors.Count > 0)
+{
+    <div class="alert alert-danger" role="alert">Einige Farbwerte sind ungültig und wurden nicht übernommen.</div>
+}
+
+<div class="row g-4">
+    <div class="col-12 col-lg-7">
+        <form asp-action="Layout" method="post" id="layoutForm" novalidate>
+            @foreach (var token in Theme.Tokens)
+            {
+                var value = Model.Values[token.Key];
+                var hasError = Model.Errors.TryGetValue(token.Key, out var error);
+                <div class="row g-2 align-items-center mb-2">
+                    <div class="col-12 col-sm-5">
+                        <label class="form-label mb-0" for="hex-@token.Key">@token.Label</label>
+                        <div class="small text-muted">@token.Hint</div>
+                    </div>
+                    <div class="col-3 col-sm-2">
+                        <input type="color" class="form-control form-control-color w-100" id="color-@token.Key"
+                               data-token="@token.Key" value="@(ThemeService.IsValidHex(value) ? value : token.Default)"
+                               aria-label="@token.Label – Farbwähler" />
+                    </div>
+                    <div class="col-9 col-sm-5">
+                        <input type="text" class="form-control@(hasError ? " is-invalid" : "")" id="hex-@token.Key"
+                               name="values[@token.Key]" value="@value" maxlength="7" pattern="#[0-9a-fA-F]{6}"
+                               data-token="@token.Key" data-css-var="@token.CssVariable" autocomplete="off"
+                               aria-describedby="err-@token.Key" aria-invalid="@(hasError ? "true" : "false")" />
+                        <div class="invalid-feedback" id="err-@token.Key">@error</div>
+                    </div>
+                </div>
+            }
+            <div class="d-flex flex-wrap gap-2 mt-3">
+                <button type="submit" class="btn btn-primary">Übernehmen</button>
+                <button type="submit" class="btn btn-outline-secondary" asp-action="LayoutReset" formnovalidate>Auf Standard zurücksetzen</button>
+            </div>
+        </form>
+    </div>
+    <div class="col-12 col-lg-5">
+        <h2 class="h5">Vorschau</h2>
+        <div id="themePreview" class="theme-preview p-3 rounded">
+            <div class="theme-preview-surface p-3 rounded mb-2">
+                <p class="mb-1">Haupttext auf Kartenfläche</p>
+                <p class="mb-1 theme-preview-muted">Gedämpfter Hinweistext</p>
+                <p class="mb-2"><a href="#" class="theme-preview-link" onclick="return false;">Beispiel-Link</a></p>
+                <div class="d-flex flex-wrap gap-1 mb-2">
+                    <span class="badge theme-preview-primary">Primär</span>
+                    <span class="badge theme-preview-accent">Akzent</span>
+                    <span class="badge theme-preview-success">Erfolg</span>
+                    <span class="badge theme-preview-warning">Warnung</span>
+                    <span class="badge theme-preview-danger">Fehler</span>
+                </div>
+                <input type="text" class="form-control theme-preview-focus mb-2" value="Fokusmarkierung" aria-label="Fokus-Vorschau" readonly />
+                <span class="theme-preview-day">12</span> <span class="theme-preview-day-today">13</span>
+                <span class="small theme-preview-muted">Kalender: Auswahl / heute</span>
+            </div>
+        </div>
+        <p id="contrastHint" class="small mt-2" role="status" aria-live="polite"></p>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/layout-editor.js" asp-append-version="true"></script>
+}

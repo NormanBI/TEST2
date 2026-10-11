@@ -37,8 +37,9 @@ Diese Zugangsdaten sind ausschließlich für die Demo gedacht und öffentlich do
 - Anmeldung über Cookie-Authentifizierung mit festen Demo-Benutzern (`Services/DemoUserStore.cs`); keine Datenbank, keine dauerhafte Speicherung (das Sitzungs-Cookie ist ein reines Session-Cookie).
 - Rollenprüfung serverseitig: Standardmäßig erfordert jede Seite eine Anmeldung (Fallback-Policy); `StammdatenController` und `AuswertungenController` erlauben alle drei Rollen, `EinstellungenController` nur `Administration` (nicht berechtigt: Weiterleitung zu `/Account/AccessDenied`, HTTP 403). Das Ausblenden des Menüpunkts ist nur zusätzlich.
 - POST-Aktionen sind per Anti-Forgery-Token geschützt.
+- Layout-Editor (Administration, `Einstellungen > Layout`): 13 semantische Farb-Tokens als CSS-Variablen, strikt als `#rrggbb` validiert, ausgeliefert über `/theme.css`. Das Thema liegt nur im Arbeitsspeicher (`Services/ThemeService.cs`, Singleton), gilt für alle Benutzer und wird beim Neustart auf die Standardfarben zurückgesetzt; es wird nichts nach `wwwroot` geschrieben. Siehe F-009.
 - Standardfarben (CSS-Variablen in `wwwroot/css/site.css`): Primär `#1f4e79`, Hintergrund `#f5f7fa`, Text `#212529`, Primär-Kontrast `#ffffff`.
-- Mandantenrolle, DATEV, Persistenz, funktionale Daten und speicherbare Farbthemen sind ausdrücklich nicht enthalten.
+- Mandantenrolle, DATEV, Persistenz, funktionale Daten und dauerhaft gespeicherte Farbthemen sind ausdrücklich nicht enthalten.
 
 ## Abhängigkeiten und Syncfusion-Lizenz
 

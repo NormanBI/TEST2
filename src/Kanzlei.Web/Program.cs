@@ -35,6 +35,8 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddControllersWithViews(options =>
     options.Filters.Add(new Microsoft.AspNetCore.Mvc.AutoValidateAntiforgeryTokenAttribute()));
 
+builder.Services.AddSingleton<IThemeService, ThemeService>();
+
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
