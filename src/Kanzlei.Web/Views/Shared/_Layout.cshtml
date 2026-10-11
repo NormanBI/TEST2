@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] – Kanzlei-Prototyp</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.syncfusion.com/ej2/35.1.39/bootstrap5.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-md navbar-dark app-navbar">
+            <div class="container">
+                <a class="navbar-brand" asp-controller="Home" asp-action="Index">Kanzlei-Prototyp</a>
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
+                            aria-controls="mainNav" aria-expanded="false" aria-label="Menü umschalten">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="collapse navbar-collapse" id="mainNav">
+                        <ul class="navbar-nav me-auto">
+                            <li class="nav-item"><a class="nav-link" asp-controller="Stammdaten" asp-action="Index">Stammdaten</a></li>
+                            <li class="nav-item"><a class="nav-link" asp-controller="Auswertungen" asp-action="Index">Auswertungen</a></li>
+                            @if (User.IsInRole(Roles.Administration))
+                            {
+                                <li class="nav-item"><a class="nav-link" asp-controller="Einstellungen" asp-action="Index">Einstellungen</a></li>
+                            }
+                        </ul>
+                        <form class="d-flex align-items-center gap-2" asp-controller="Account" asp-action="Logout" method="post">
+                            <span class="navbar-text">@User.Identity.Name</span>
+                            <button type="submit" class="btn btn-outline-light btn-sm">Abmelden</button>
+                        </form>
+                    </div>
+                }
+            </div>
+        </nav>
+    </header>
+    <main class="container py-4" role="main">
+        @RenderBody()
+    </main>
+    <footer class="border-top text-muted small py-3">
+        <div class="container">Demo-Prototyp – nur fiktive Demodaten, keine dauerhafte Speicherung.</div>
+    </footer>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.syncfusion.com/ej2/35.1.39/dist/ej2.min.js"></script>
+    <ejs-scripts></ejs-scripts>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

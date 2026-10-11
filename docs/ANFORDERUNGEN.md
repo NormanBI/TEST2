@@ -167,6 +167,8 @@ Bei jeder Anforderungsänderung wird ein neuer Eintrag mit Datum und Dokumentver
 | 0.3 | 11. Oktober 2026 | Leeres Kalenderwidget, Platzhalterseiten, Admin-spezifisches Menü, Mandantenrolle für später und Standardfarben bestätigt. |
 | 1.0 | 11. Oktober 2026 | Anforderungen zusammengeführt, IDs und Abnahmekriterien ergänzt, Umfang des ersten Prototyps abgegrenzt und Demo-Abnahmeszenario dokumentiert. |
 
+| 1.1 | 2026-10-11 | Prototyp umgesetzt (siehe README). Entscheidungen zu Abschnitt 8: Demo-Zugänge `admin`, `steuerberater`, `sachbearbeiter` (Passwörter im README); Cookie-Authentifizierung mit festen Demo-Benutzern und serverseitiger Rollenprüfung; Kalender = Syncfusion `ejs-calendar` ohne Termine; Platzhaltertext „Platzhalter – diese Funktion ist im ersten Prototyp noch nicht umgesetzt.“; Standardfarben Primär `#1f4e79`, Hintergrund `#f5f7fa`, Text `#212529`. | F-001 bis F-009 |
+
 ### Vorlage für künftige Änderungsprotokolleinträge
 
 | Version | Datum | Änderung | Betroffene IDs |
