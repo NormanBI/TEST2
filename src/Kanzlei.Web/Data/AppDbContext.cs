@@ -8,6 +8,7 @@ public class AppDbContext : DbContext
 
     public DbSet<Benutzer> Benutzer => Set<Benutzer>();
     public DbSet<MailEinstellungen> MailEinstellungen => Set<MailEinstellungen>();
+    public DbSet<Einstellungen> Einstellungen => Set<Einstellungen>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -43,6 +44,14 @@ public class AppDbContext : DbContext
             e.Property(m => m.SslModus).HasConversion<string>().HasMaxLength(20);
             e.Property(m => m.Aktiv).HasDefaultValue(true).HasSentinel(true);
             e.Property(m => m.Konfiguriert).HasDefaultValue(false);
+        });
+
+        modelBuilder.Entity<Einstellungen>(e =>
+        {
+            e.ToTable("Einstellungen", t => t.HasCheckConstraint("CK_Einstellungen_Singleton", "`Id` = 1"));
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).ValueGeneratedNever();
+            e.Property(x => x.Navigationstext).IsRequired().HasMaxLength(Data.Einstellungen.NavigationstextMaxLaenge);
         });
     }
 }

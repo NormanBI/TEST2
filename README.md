@@ -72,6 +72,16 @@ Es gibt **keine festen Demo-Zugänge und keine voreingestellten Passwörter** me
 - **Tests:** Laufen ohne MySQL mit Fakes (`TestSupport.cs`). Ein echter MySQL-Test ist nicht enthalten.
 
 
+## Navigationstext (Tabelle `Einstellungen`)
+
+Der Text oben links in der Navigation (Standard `Kanzlei-Prototyp`) ist unter **Einstellungen > Layout** (nur Administration) änderbar und liegt in MySQL.
+
+- **Schema:** Tabelle `Einstellungen` (Migration `AddEinstellungen`, additiv): Singleton-Datensatz `Id = 1` (Check-Constraint `CK_Einstellungen_Singleton`), `Navigationstext` (max. 80 Zeichen), `ErstelltAm`, `GeaendertAm` (UTC). Keine weiteren Einstellungen.
+- **Standard/Anlage:** Fehlt der Datensatz oder ist die Datenbank nicht erreichbar, wird `Kanzlei-Prototyp` angezeigt (fail-safe, keine Fehlerseite). Nach den Migrationen legt die Anwendung den Datensatz idempotent an; die Einrichtungsreihenfolge (Datenbank → Mailserver → erster Administrator → Anmeldung) bleibt unverändert.
+- **Bearbeiten:** `POST /Einstellungen/Navigationstext` (Administration, Anti-Forgery). Validierung: Pflichtfeld, Leerraum an den Rändern wird entfernt, höchstens 80 Zeichen, keine Steuerzeichen, kein Markup (`<`, `>`, `&`); deutsche Fehlermeldung bei Fehlern. Die Ausgabe im Layout ist HTML-kodiert.
+- **Zwischenspeicher:** `Services/BrandingService.cs` (Singleton) hält den Wert im Speicher, aktualisiert ihn beim Speichern und lädt ihn bei Bedarf aus MySQL (bei Fehlern Standardtext, Wiederholung frühestens nach 10 Sekunden). Einzelinstanz-Annahme, wie beim Farbthema.
+- **Tests:** `tests/Kanzlei.Web.Tests/EinstellungenTests.cs` mit EF-Core-InMemory und Schema-/Migrationsprüfung über das MySQL-Provider-Skript; ein Test gegen einen echten MySQL-Server ist nicht enthalten.
+
 ## Mailserver (SMTP-Einstellungen)
 
 Grundlage für ein späteres Passwort-Zurücksetzen. Es werden **keine** E-Mails versendet und es gibt keine Passwort-Zurücksetzen-Endpunkte.

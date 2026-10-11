@@ -79,6 +79,7 @@ builder.Services.AddSingleton<IDatabaseGateway, MySqlDatabaseGateway>();
 builder.Services.AddSingleton<IPasswordHasher<Benutzer>, PasswordHasher<Benutzer>>();
 builder.Services.AddSingleton<IAppDbContextFactory, MySqlAppDbContextFactory>();
 builder.Services.AddSingleton<IBenutzerStore, EfBenutzerStore>();
+builder.Services.AddSingleton<IBrandingService, EfBrandingService>();
 builder.Services.AddSingleton<IMailSettingsStore, EfMailSettingsStore>();
 builder.Services.AddSingleton<IMailConnectionTester, MailKitConnectionTester>();
 builder.Services.AddSingleton<IDatabaseState, DatabaseState>();

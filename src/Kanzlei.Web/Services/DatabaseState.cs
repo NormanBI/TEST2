@@ -25,15 +25,16 @@ public sealed class DatabaseState : IDatabaseState
     private readonly IBenutzerStore? _users;
     private readonly IMailSettingsStore? _mail;
     private readonly IMailConnectionTester? _mailTester;
+    private readonly IBrandingService? _branding;
     private readonly SemaphoreSlim _lock = new(1, 1);
     private DateTimeOffset _lastAttempt = DateTimeOffset.MinValue;
     private volatile DatabaseStatus _status = DatabaseStatus.Unknown;
     private DbConnectionSettings? _settings;
 
     public DatabaseState(IDbSettingsStore store, IDatabaseGateway gateway, ILogger<DatabaseState> logger, IBenutzerStore? users = null,
-        IMailSettingsStore? mail = null, IMailConnectionTester? mailTester = null)
+        IMailSettingsStore? mail = null, IMailConnectionTester? mailTester = null, IBrandingService? branding = null)
     {
-        _store = store; _gateway = gateway; _logger = logger; _users = users; _mail = mail; _mailTester = mailTester;
+        _store = store; _gateway = gateway; _logger = logger; _users = users; _mail = mail; _mailTester = mailTester; _branding = branding;
     }
 
     public DatabaseStatus Status => _status;
@@ -43,6 +44,7 @@ public sealed class DatabaseState : IDatabaseState
     // Eine nicht lesbare Mail-Konfiguration sperrt fail-closed, ohne sie zu ändern.
     private async Task<DatabaseStatus> ReadyOrAdminRequiredAsync(CancellationToken ct)
     {
+        await EnsureBrandingRowAsync(ct);
         if (_mail is not null)
         {
             var mail = await _mail.LoadAsync(ct);
@@ -50,6 +52,17 @@ public sealed class DatabaseState : IDatabaseState
             if (mail.Status == MailSettingsLoadStatus.Unreadable) return DatabaseStatus.MailConfigUnreadable;
         }
         return await AdminOrReadyAsync(ct);
+    }
+
+    // Legt nach den Migrationen den Einstellungen-Datensatz an; Fehler blockieren die Einrichtung nicht (Standardtext als Fallback).
+    private async Task EnsureBrandingRowAsync(CancellationToken ct)
+    {
+        if (_branding is null) return;
+        try { await _branding.EnsureRowAsync(ct); }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning("Einstellungen-Datensatz konnte nicht angelegt werden ({ExceptionType}).", ex.GetType().Name);
+        }
     }
 
     private async Task<DatabaseStatus> AdminOrReadyAsync(CancellationToken ct)

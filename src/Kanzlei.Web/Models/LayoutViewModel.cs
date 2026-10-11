@@ -14,6 +14,9 @@ public class LayoutViewModel
         Errors = errors ?? new Dictionary<string, string>();
     }
 
+    public string Navigationstext { get; init; } = Data.Einstellungen.StandardNavigationstext;
+    public string? NavigationstextError { get; init; }
+
     public IReadOnlyDictionary<string, string> Values { get; }
     public IReadOnlyDictionary<string, string> Errors { get; }
 }

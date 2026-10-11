@@ -26,6 +26,18 @@
     <div class="alert alert-danger" role="alert">Einige Farbwerte sind ungültig und wurden nicht übernommen.</div>
 }
 
+<form asp-action="Navigationstext" method="post" class="mb-4" novalidate>
+    <label class="form-label" for="navigationstext">Text oben links in der Navigation</label>
+    <div class="input-group">
+        <input type="text" class="form-control@(Model.NavigationstextError is null ? "" : " is-invalid")" id="navigationstext" name="navigationstext"
+               value="@Model.Navigationstext" maxlength="@Kanzlei.Web.Data.Einstellungen.NavigationstextMaxLaenge" autocomplete="off" aria-invalid="@(Model.NavigationstextError is null ? "false" : "true")"
+               aria-describedby="navigationstext-hilfe@(Model.NavigationstextError is null ? "" : " navigationstext-fehler")" />
+        <button type="submit" class="btn btn-primary">Text speichern</button>
+        <div class="invalid-feedback" id="navigationstext-fehler" role="alert">@Model.NavigationstextError</div>
+    </div>
+    <div class="form-text" id="navigationstext-hilfe">Pflichtfeld, höchstens @Kanzlei.Web.Data.Einstellungen.NavigationstextMaxLaenge Zeichen, kein HTML. Standard: „@Kanzlei.Web.Data.Einstellungen.StandardNavigationstext“.</div>
+</form>
+
 <div class="row g-4">
     <div class="col-12 col-lg-7">
         <form asp-action="Layout" method="post" id="layoutForm" novalidate>
