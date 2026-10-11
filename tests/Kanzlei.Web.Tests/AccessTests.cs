@@ -99,6 +99,36 @@ public class AccessTests : IClassFixture<TestAppFactory>
     }
 
     [Fact]
+    public async Task Einstellungen_Uebersicht_ShowsTilesWithRealDestinations_ForAdmin()
+    {
+        var client = await LoginAsync(Fixtures.AdminEmail, Fixtures.AdminPassword);
+        var html = await client.GetStringAsync("/Einstellungen");
+        Assert.Contains("einstellungen-kacheln", html);
+        Assert.DoesNotContain("Platzhalter", html);
+        foreach (var (href, title) in new[] { ("/Einstellungen/Layout", "Layout"), ("/Benutzer", "Benutzer"), ("/Einstellungen/Mailserver", "Mailserver") })
+        {
+            Assert.Contains("settings-tile-link", html);
+            Assert.Matches("href=(\\\\?\\\\u0022|\\\\?\"|\")" + System.Text.RegularExpressions.Regex.Escape(href) + "(\\\\?\\\\u0022|\\\\?\"|\")", html);
+            Assert.Contains(title, html);
+            Assert.Equal(HttpStatusCode.OK, (await client.GetAsync(href)).StatusCode);
+        }
+    }
+
+    [Fact]
+    public async Task Einstellungen_Uebersicht_ExposesNoTiles_ToNonAdminOrAnonymous()
+    {
+        var berater = await LoginAsync(Fixtures.BeraterEmail, Fixtures.BeraterPassword);
+        var denied = await berater.GetAsync("/Einstellungen");
+        Assert.Equal(HttpStatusCode.Redirect, denied.StatusCode);
+        Assert.DoesNotContain("settings-tile", await denied.Content.ReadAsStringAsync());
+
+        var anon = await NewClient().GetAsync("/Einstellungen");
+        Assert.Equal(HttpStatusCode.Redirect, anon.StatusCode);
+        Assert.Contains("/Account/Login", anon.Headers.Location!.ToString());
+        Assert.DoesNotContain("settings-tile", await anon.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
     public async Task Logout_EndsSession()
     {
         var client = await LoginAsync(Fixtures.AdminEmail, Fixtures.AdminPassword);

@@ -85,3 +85,12 @@ a { color: var(--app-link); }
 .theme-preview-day, .theme-preview-day-today { display: inline-block; min-width: 2rem; text-align: center; border-radius: 50%; padding: .1rem; }
 .theme-preview-day { background-color: var(--app-calendar); color: var(--app-calendar-contrast); }
 .theme-preview-day-today { border: 1px solid var(--app-calendar); color: var(--app-calendar); }
+
+/* Einstellungen-Kacheln (Syncfusion DashboardLayout) */
+.settings-tile.e-panel { background-color: var(--app-surface); border: 1px solid var(--app-border); border-radius: .5rem; }
+.settings-tile .e-panel-container { height: 100%; }
+.settings-tile-link { display: flex; flex-direction: column; justify-content: center; gap: .25rem; height: 100%; padding: 1rem 1.25rem; color: var(--app-text); text-decoration: none; border-radius: .5rem; }
+.settings-tile-link:hover { background-color: var(--app-background); color: var(--app-link); }
+.settings-tile-link:focus-visible { outline: 3px solid var(--app-focus); outline-offset: -3px; }
+.settings-tile-title { font-size: 1.25rem; font-weight: 600; color: var(--app-primary); }
+.settings-tile-text { color: var(--app-muted); }
