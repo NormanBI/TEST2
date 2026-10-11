@@ -101,3 +101,11 @@ a { color: var(--app-link); }
 .mandanten-dashboard .mandanten-panel { background: #fff; border: 1px solid rgba(0, 0, 0, .125); border-radius: .375rem; overflow: hidden; }
 .mandanten-dashboard .mandanten-panel .e-panel-header { font-weight: 600; padding: .5rem .75rem; color: var(--app-primary, inherit); }
 .mandanten-chart { width: 100%; height: 100%; min-height: 220px; }
+
+.mg-liste { min-height: 3rem; max-height: 32rem; overflow-y: auto; }
+.mg-client { display: flex; flex-wrap: wrap; gap: .5rem; justify-content: space-between; align-items: center; padding: .5rem .75rem; margin-bottom: .5rem; background: #fff; border: 1px solid rgba(0, 0, 0, .125); border-radius: .375rem; cursor: grab; }
+.mg-client.mg-dragging { opacity: .5; }
+.mg-client-aktionen { display: flex; gap: .25rem; align-items: center; }
+.mg-gruppe { padding: .75rem; border: 2px dashed rgba(0, 0, 0, .2); border-radius: .375rem; height: 100%; }
+.mg-gruppe-name { color: var(--app-primary, inherit); overflow-wrap: anywhere; }
+.mg-drop-aktiv { border-color: var(--app-primary, #0d6efd); background: rgba(13, 110, 253, .06); }

@@ -102,6 +102,14 @@ Grundlage für ein späteres Passwort-Zurücksetzen. Es werden **keine** E-Mails
 - **Layout je Benutzer:** Kacheln sind verschieb- und in der Größe änderbar. Die Anordnung (Zeile, Spalte, Breite, Höhe) wird in der Tabelle `BenutzerDashboardLayouts` zum authentifizierten Benutzer gespeichert (eindeutiger Index und Fremdschlüssel auf `Benutzer.Id`) und beim nächsten Besuch wiederhergestellt. Speichern per `POST /Auswertungen/Mandanten/Layout` mit Anti-Forgery-Token; validiert werden bekannte Panel-IDs (`panel-status`, `panel-typ`), ganzzahlige Grenzen im 12-Spalten-Raster und Überlappungsfreiheit. Fehlende oder ungültige gespeicherte Werte werden sicher durch das Standardlayout (zwei Kacheln nebeneinander) ersetzt; „Layout zurücksetzen“ löscht die Einstellung. Auf schmalen Bildschirmen (< 768 px) stapelt das DashboardLayout die Kacheln einspaltig; dieses mobile Layout wird nicht gespeichert.
 - **Verifikation:** Die Tests laufen gegen EF-Core-InMemory bzw. das MySQL-Provider-Skript; eine Migration gegen einen echten MySQL-Server und eine Sichtprüfung im Browser (Syncfusion-CDN) wurden nicht durchgeführt.
 
+## Mandantengruppen (Auswertungen > Stammdaten > Mandantengruppen)
+
+- Erreichbar unter `/Auswertungen/Mandantengruppen`, nur für die Rollen **Administration**, **Eigentümer** und **Steuerberater**. Sachbearbeiter sehen den Menüpunkt nicht und erhalten keinen Zugriff; die Prüfung gilt serverseitig für die Seite und alle Aktionen (Anlegen, Zuordnen, Entfernen, Daten). Die Rechte des Mandanten-Berichts bleiben unverändert.
+- Gruppen anlegen (Name erforderlich, getrimmt, max. 100 Zeichen, eindeutig ohne Beachtung der Groß-/Kleinschreibung) und über ein Suchfeld filtern. Ein zweites Suchfeld filtert Mandanten nach Nummer, Name, abweichendem Namen, Organisation und Niederlassung.
+- Zuordnen per Maus (Drag & Drop auf eine Gruppe) oder per Tastatur (Gruppe wählen und „Zuordnen“). Rückgängig durch Ziehen zurück in die Liste „Nicht zugeordnete Mandanten“ oder mit „Entfernen“. Eine Statusmeldung bestätigt jede Änderung.
+- Ein Mandant gehört höchstens einer Gruppe an (Primärschlüssel `MasterClientId` in `MandantengruppeMitglieder`); eine neue Zuordnung verschiebt ihn. `Master_Clients`-Zeilen werden nie gelöscht, Gruppen können nicht gelöscht werden.
+- Gruppen und Zuordnungen liegen in MySQL (Migration `AddMandantengruppen`, additiv) und sind für alle berechtigten Benutzer gemeinsam sichtbar.
+
 ## Abhängigkeiten und Syncfusion-Lizenz
 
 - NuGet: `Syncfusion.EJ2.AspNet.Core` 35.1.39 (Kalender-Widget `ejs-calendar`), `Pomelo.EntityFrameworkCore.MySql` 8.0.3, `MailKit` 4.18.1, `Microsoft.EntityFrameworkCore.Relational`/`.Design` 8.0.31, `Microsoft.AspNetCore.Mvc.Testing` (nur Tests). Bootstrap/jQuery liegen unter `wwwroot/lib`.

@@ -82,6 +82,7 @@ builder.Services.AddSingleton<IBenutzerStore, EfBenutzerStore>();
 builder.Services.AddSingleton<IBrandingService, EfBrandingService>();
 builder.Services.AddSingleton<IMandantenAuswertungService, EfMandantenAuswertungService>();
 builder.Services.AddSingleton<IDashboardLayoutStore, EfDashboardLayoutStore>();
+builder.Services.AddSingleton<IMandantengruppenService, EfMandantengruppenService>();
 builder.Services.AddSingleton<IMailSettingsStore, EfMailSettingsStore>();
 builder.Services.AddSingleton<IMailConnectionTester, MailKitConnectionTester>();
 builder.Services.AddSingleton<IDatabaseState, DatabaseState>();

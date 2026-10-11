@@ -216,6 +216,54 @@ namespace Kanzlei.Web.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Kanzlei.Web.Data.Mandantengruppe", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("ErstelltAm")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<string>("NameNormalisiert")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NameNormalisiert")
+                        .IsUnique();
+
+                    b.ToTable("Mandantengruppen", (string)null);
+                });
+
+            modelBuilder.Entity("Kanzlei.Web.Data.MandantengruppeMitglied", b =>
+                {
+                    b.Property<string>("MasterClientId")
+                        .HasMaxLength(450)
+                        .HasColumnType("varchar(450)");
+
+                    b.Property<int>("MandantengruppeId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("ZugeordnetAm")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("MasterClientId");
+
+                    b.HasIndex("MandantengruppeId");
+
+                    b.ToTable("MandantengruppeMitglieder", (string)null);
+                });
+
             modelBuilder.Entity("Kanzlei.Web.Data.MasterClient", b =>
                 {
                     b.Property<string>("Id")
@@ -367,6 +415,28 @@ namespace Kanzlei.Web.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Benutzer");
+                });
+
+            modelBuilder.Entity("Kanzlei.Web.Data.MandantengruppeMitglied", b =>
+                {
+                    b.HasOne("Kanzlei.Web.Data.Mandantengruppe", "Mandantengruppe")
+                        .WithMany("Mitglieder")
+                        .HasForeignKey("MandantengruppeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Kanzlei.Web.Data.MasterClient", null)
+                        .WithMany()
+                        .HasForeignKey("MasterClientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Mandantengruppe");
+                });
+
+            modelBuilder.Entity("Kanzlei.Web.Data.Mandantengruppe", b =>
+                {
+                    b.Navigation("Mitglieder");
                 });
 #pragma warning restore 612, 618
         }
