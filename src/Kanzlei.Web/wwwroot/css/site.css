@@ -1,0 +1,23 @@
+/* Dokumentierte Standardfarben (siehe README / docs/ANFORDERUNGEN.md). */
+:root {
+  --app-primary: #1f4e79;
+  --app-primary-contrast: #ffffff;
+  --app-background: #f5f7fa;
+  --app-text: #212529;
+}
+
+html { font-size: 14px; }
+@media (min-width: 768px) { html { font-size: 16px; } }
+
+body {
+  background-color: var(--app-background);
+  color: var(--app-text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+main { flex: 1 0 auto; }
+.app-navbar { background-color: var(--app-primary); }
+.btn-primary { background-color: var(--app-primary); border-color: var(--app-primary); color: var(--app-primary-contrast); }
+.calendar-widget { max-width: 100%; overflow-x: auto; }
+.calendar-widget .e-calendar { max-width: 100%; }
