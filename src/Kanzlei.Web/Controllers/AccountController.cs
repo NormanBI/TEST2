@@ -10,6 +10,9 @@ namespace Kanzlei.Web.Controllers;
 
 public class AccountController : Controller
 {
+    private readonly IBenutzerStore _users;
+    public AccountController(IBenutzerStore users) => _users = users;
+
     [AllowAnonymous]
     [HttpGet]
     public IActionResult Login(string? returnUrl = null)
@@ -24,29 +27,28 @@ public class AccountController : Controller
 
     [AllowAnonymous]
     [HttpPost]
-    public async Task<IActionResult> Login(LoginViewModel model)
+    public async Task<IActionResult> Login(LoginViewModel model, CancellationToken ct)
     {
         if (!ModelState.IsValid)
         {
             return View(model);
         }
 
-        var user = DemoUserStore.Validate(model.UserName, model.Password);
+        var user = await _users.AuthenticateAsync(model.UserName, model.Password, ct);
         if (user is null)
         {
-            ModelState.AddModelError(string.Empty, "Benutzername oder Passwort ist ungültig.");
+            ModelState.AddModelError(string.Empty, "E-Mail-Adresse oder Passwort ist ungültig.");
             model.Password = null;
             return View(model);
         }
 
-        var identity = new ClaimsIdentity(
-            new[]
-            {
-                new Claim(ClaimTypes.Name, user.DisplayName),
-                new Claim(ClaimTypes.NameIdentifier, user.UserName),
-                new Claim(ClaimTypes.Role, user.Role),
-            },
-            CookieAuthenticationDefaults.AuthenticationScheme);
+        var claims = new List<Claim>
+        {
+            new(ClaimTypes.Name, user.Anzeigename),
+            new(ClaimTypes.NameIdentifier, user.Id.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+        };
+        claims.AddRange(user.Rollen.Select(r => new Claim(ClaimTypes.Role, r)));
+        var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
 
         await HttpContext.SignInAsync(
             CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity));

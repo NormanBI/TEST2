@@ -50,7 +50,8 @@ Die konkreten Syncfusion-Komponenten, Authentifizierungsdetails und Ausführungs
 
 | Rolle | Im Prototyp enthalten | Sichtbare Menüpunkte |
 |---|---:|---|
-| Administration | Ja | Stammdaten, Auswertungen, Einstellungen |
+| Administration | Ja | Stammdaten, Auswertungen, Einstellungen (Layout, Benutzer) |
+| Eigentümer | Ja (Rolle vorhanden, noch keine eigenen Berechtigungen, ab v1.5) | Noch nicht festgelegt |
 | Steuerberater | Ja | Stammdaten, Auswertungen |
 | Sachbearbeiter | Ja | Stammdaten, Auswertungen |
 | Mandant | Nein, für später vorgemerkt | Noch nicht festgelegt |
@@ -150,6 +151,19 @@ Die Anwendung fragt ohne gültige MySQL-Konfiguration vor der Anmeldung die Verb
 - Beim Start: Laden, Verbindungsprüfung, automatische Migrationen. Unlesbare Konfiguration oder nicht erreichbarer Server führen zu einer Status-/Wiederherstellungsseite statt zur Anmeldung und überschreiben nichts.
 - Farbthema (F-009) und Demo-Benutzer (F-001) bleiben unverändert und unabhängig von MySQL. Annahmen: Einzelinstanz, lokales Dateisystem.
 
+### F-011 – Benutzerverwaltung mit Datenbankkonten (löst die Demo-Benutzer aus F-001 ab)
+
+Benutzerkonten liegen in MySQL (Tabelle `Benutzer`) und werden unter Einstellungen > Benutzer (nur Administration) verwaltet.
+
+**Abnahmekriterien:**
+- Felder: Vorname, Nachname, Emailadresse (Pflicht, eindeutig, groß-/kleinschreibungsunabhängig), Kundennutzer (Standard Nein), Passwort, Administrator, Eigentümer, Steuerberater, Sachbearbeiter, Aktiv (Standard Ja), Zeitstempel.
+- Passwörter werden **nicht umkehrbar verschlüsselt**, sondern mit `IPasswordHasher<Benutzer>` gesalzen und adaptiv gehasht (Spalte `PasswortHash`); Hash und Passwort werden nie angezeigt, protokolliert oder erneut ausgegeben. Passwortrichtlinie: 12–128 Zeichen, Groß-/Kleinbuchstaben, Ziffer.
+- Erster Administrator: Ohne aktiven Administrator verlangt die Einrichtung (`/Setup/Admin`) Vorname, Nachname, Emailadresse und Passwort; idempotent, keine festen oder committeten Standardpasswörter.
+- Anmeldung gegen die Datenbank; Rollen-Claims ergeben sich aus den vier Rollen-Flags, Kundennutzer ist keine Rolle; Benutzer ohne Rolle erhalten keine Rollen-Claims.
+- Liste, Anlegen, Aktivieren/Deaktivieren; **kein Löschen** (keine Route, kein Button). Deaktivierte Benutzer können sich nicht anmelden, bestehende Sitzungen enden bei der nächsten Anfrage. Der letzte aktive Administrator kann nicht deaktiviert werden.
+- Serverseitige Autorisierung (nur Administration) für alle Aktionen; POSTs mit Anti-Forgery-Token; deutsche, responsive Oberfläche mit deutschen Feldfehlern (Pflichtfelder, E-Mail-Format, Passwortrichtlinie, doppelte Emailadresse).
+- Migration `AddBenutzer` (additiv, MySQL/Pomelo). Bekannte Grenzen: kein Bearbeiten/Passwort-Zurücksetzen, keine Rollenänderung nach dem Anlegen, Sperre für die Letzter-Administrator-Regel nur innerhalb einer Instanz.
+
 ## 6. Demo-Abnahmeszenario
 
 1. Demo-Administration anmelden.
@@ -196,6 +210,7 @@ Bei jeder Anforderungsänderung wird ein neuer Eintrag mit Datum und Dokumentver
 | 1.2 | 2026-10-11 | Layout-Editor unter Einstellungen > Layout (nur Administration): semantische CSS-Variablen, strikte Hex-Validierung, Übernehmen/Zurücksetzen, gemeinsames Thema ausschließlich im Arbeitsspeicher (Reset bei Neustart, bewusst keine Datenbank, kein Schreiben in wwwroot). Ablösung der Abgrenzung „Einstellbare und gespeicherte Farben“ für den flüchtigen Fall; dauerhafte Speicherung bleibt später. | F-004, F-008, F-009 |
 | 1.3 | 2026-10-11 | Dateibasierte Persistenz des Farbthemas: CSS-Datei `App_Data/theme.css` (konfigurierbar über `THEME_CSS_FILE`), atomares Schreiben, strenge Validierung beim Laden mit sicherem Fallback auf Standardfarben; Einstellungen überstehen Neustarts. Nur Einzelinstanzbetrieb. Ersetzt die rein flüchtige Speicherung aus v1.2. | F-009 |
 | 1.4 | 2026-10-11 | MySQL-Anbindung: Ersteinrichtung vor der Anmeldung, Test-vor-Speichern, Passwort per Data Protection verschlüsselt in `App_Data/db-settings.json` mit persistiertem Schlüsselbund, EF-Core-Kontext (Pomelo 8.0.3) mit initialer Migration, automatische Migration beim Start, Status-/Wiederherstellungsseite. Ergänzt F-007 (Datenbank für spätere Fachdaten; Demo-Benutzer und Theme-Datei unverändert). Nur Einzelinstanzbetrieb. | F-007, F-010 |
+| 1.5 | 2026-10-11 | Benutzerverwaltung: Tabelle `Benutzer` (Migration `AddBenutzer`), Passwort als gesalzener Einweg-Hash statt umkehrbarer Verschlüsselung, Ersteinrichtung des ersten Administrators über `/Setup/Admin` (keine festen Zugangsdaten), Anmeldung gegen die Datenbank, Menü Einstellungen > Benutzer, Deaktivieren statt Löschen, Schutz des letzten Administrators, Sitzungsende bei Deaktivierung. Löst die festen Demo-Benutzer aus v1.1 (F-001) ab; frühere Einträge bleiben unverändert. | F-001, F-004, F-007, F-011 |
 
 ### Vorlage für künftige Änderungsprotokolleinträge
 

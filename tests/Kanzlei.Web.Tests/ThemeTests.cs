@@ -128,8 +128,8 @@ public class ThemeEndpointTests : IClassFixture<TestAppFactory>
     }
 
     [Theory]
-    [InlineData("steuerberater", "Demo-Steuerberater-1")]
-    [InlineData("sachbearbeiter", "Demo-Sachbearbeiter-1")]
+    [InlineData(Fixtures.BeraterEmail, Fixtures.BeraterPassword)]
+    [InlineData(Fixtures.SachbearbeiterEmail, Fixtures.SachbearbeiterPassword)]
     public async Task Layout_NonAdmin_IsDeniedOnGetAndPost_AndThemeUnchanged(string user, string password)
     {
         using var factory = new TestAppFactory();
@@ -155,7 +155,7 @@ public class ThemeEndpointTests : IClassFixture<TestAppFactory>
     public async Task Admin_SeesLayoutMenu_AndPage()
     {
         using var factory = new TestAppFactory();
-        var client = await LoginAsync("admin", "Demo-Admin-1", factory);
+        var client = await LoginAsync(Fixtures.AdminEmail, Fixtures.AdminPassword, factory);
         Assert.Contains(">Layout<", await client.GetStringAsync("/"));
         var page = await client.GetStringAsync("/Einstellungen/Layout");
         Assert.Contains("Neustart", page);
@@ -167,8 +167,8 @@ public class ThemeEndpointTests : IClassFixture<TestAppFactory>
     public async Task Admin_AppliesTheme_SharedWithOtherUsers_ThenResets()
     {
         using var factory = new TestAppFactory();
-        var admin = await LoginAsync("admin", "Demo-Admin-1", factory);
-        var other = await LoginAsync("steuerberater", "Demo-Steuerberater-1", factory);
+        var admin = await LoginAsync(Fixtures.AdminEmail, Fixtures.AdminPassword, factory);
+        var other = await LoginAsync(Fixtures.BeraterEmail, Fixtures.BeraterPassword, factory);
 
         var token = await TokenAsync(admin, "/Einstellungen/Layout");
         var apply = await admin.PostAsync("/Einstellungen/Layout", new FormUrlEncodedContent(Form(token, "#AA0000")));
@@ -191,7 +191,7 @@ public class ThemeEndpointTests : IClassFixture<TestAppFactory>
     public async Task Admin_InvalidColor_IsRejected_AndNotDelivered()
     {
         using var factory = new TestAppFactory();
-        var admin = await LoginAsync("admin", "Demo-Admin-1", factory);
+        var admin = await LoginAsync(Fixtures.AdminEmail, Fixtures.AdminPassword, factory);
         var token = await TokenAsync(admin, "/Einstellungen/Layout");
         var response = await admin.PostAsync("/Einstellungen/Layout",
             new FormUrlEncodedContent(Form(token, "#fff;} body{display:none")));
@@ -205,7 +205,7 @@ public class ThemeEndpointTests : IClassFixture<TestAppFactory>
     public async Task Post_WithoutAntiforgeryToken_IsRejected()
     {
         using var factory = new TestAppFactory();
-        var admin = await LoginAsync("admin", "Demo-Admin-1", factory);
+        var admin = await LoginAsync(Fixtures.AdminEmail, Fixtures.AdminPassword, factory);
         var form = ThemeService.Defaults().ToDictionary(p => $"values[{p.Key}]", p => p.Value);
         var response = await admin.PostAsync("/Einstellungen/Layout", new FormUrlEncodedContent(form));
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);

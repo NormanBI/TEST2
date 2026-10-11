@@ -282,6 +282,7 @@ public class DbSettingsStoreTests : IDisposable
             b.ConfigureServices(s =>
             {
                 s.RemoveAll<IDatabaseGateway>(); s.AddSingleton<IDatabaseGateway>(gateway);
+                s.RemoveAll<IAppDbContextFactory>(); s.AddSingleton<IAppDbContextFactory>(new InMemoryDbContextFactory());
             });
         });
         var c = f.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions { AllowAutoRedirect = false });

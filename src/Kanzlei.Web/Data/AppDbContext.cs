@@ -2,9 +2,31 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Kanzlei.Web.Data;
 
-// Persistenzgrundlage für spätere Fachdaten. Aktuell gibt es bewusst keine Entitäten;
-// neue DbSet<T>-Properties werden hier ergänzt und per "dotnet ef migrations add" migriert.
 public class AppDbContext : DbContext
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+
+    public DbSet<Benutzer> Benutzer => Set<Benutzer>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Benutzer>(e =>
+        {
+            e.ToTable("Benutzer");
+            e.HasKey(b => b.Id);
+            e.Property(b => b.Vorname).IsRequired().HasMaxLength(100);
+            e.Property(b => b.Nachname).IsRequired().HasMaxLength(100);
+            e.Property(b => b.Emailadresse).IsRequired().HasMaxLength(254);
+            e.Property(b => b.EmailNormalisiert).IsRequired().HasMaxLength(254);
+            e.Property(b => b.PasswortHash).IsRequired().HasMaxLength(512);
+            e.Property(b => b.Kundennutzer).HasDefaultValue(false);
+            e.Property(b => b.Administrator).HasDefaultValue(false);
+            e.Property(b => b.Eigentuemer).HasDefaultValue(false);
+            e.Property(b => b.Steuerberater).HasDefaultValue(false);
+            e.Property(b => b.Sachbearbeiter).HasDefaultValue(false);
+            // Sentinel true, damit ein ausdrücklich gesetztes false (deaktiviert) nicht vom Datenbank-Default überschrieben wird.
+            e.Property(b => b.Aktiv).HasDefaultValue(true).HasSentinel(true);
+            e.HasIndex(b => b.EmailNormalisiert).IsUnique();
+        });
+    }
 }

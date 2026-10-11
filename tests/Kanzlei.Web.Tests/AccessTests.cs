@@ -41,6 +41,7 @@ public class AccessTests : IClassFixture<TestAppFactory>
     [InlineData("/Stammdaten")]
     [InlineData("/Auswertungen")]
     [InlineData("/Einstellungen")]
+    [InlineData("/Benutzer")]
     public async Task Anonymous_IsRedirectedToLogin(string url)
     {
         var response = await NewClient().GetAsync(url);
@@ -55,7 +56,7 @@ public class AccessTests : IClassFixture<TestAppFactory>
         var token = await TokenAsync(client, "/Account/Login");
         var response = await client.PostAsync("/Account/Login", new FormUrlEncodedContent(new Dictionary<string, string>
         {
-            ["UserName"] = "admin",
+            ["UserName"] = Fixtures.AdminEmail,
             ["Password"] = "falsch",
             ["__RequestVerificationToken"] = token,
         }));
@@ -66,7 +67,7 @@ public class AccessTests : IClassFixture<TestAppFactory>
     [Fact]
     public async Task Admin_SeesAllMenuItems_AndCanOpenEinstellungen()
     {
-        var client = await LoginAsync("admin", "Demo-Admin-1");
+        var client = await LoginAsync(Fixtures.AdminEmail, Fixtures.AdminPassword);
         var home = await client.GetStringAsync("/");
         Assert.Contains("id=\"kalender\"", home);
         Assert.Contains(">Stammdaten<", home);
@@ -79,8 +80,8 @@ public class AccessTests : IClassFixture<TestAppFactory>
     }
 
     [Theory]
-    [InlineData("steuerberater", "Demo-Steuerberater-1")]
-    [InlineData("sachbearbeiter", "Demo-Sachbearbeiter-1")]
+    [InlineData(Fixtures.BeraterEmail, Fixtures.BeraterPassword)]
+    [InlineData(Fixtures.SachbearbeiterEmail, Fixtures.SachbearbeiterPassword)]
     public async Task NonAdmin_HasNoEinstellungen_AndServerDeniesAccess(string user, string password)
     {
         var client = await LoginAsync(user, password);
@@ -100,7 +101,7 @@ public class AccessTests : IClassFixture<TestAppFactory>
     [Fact]
     public async Task Logout_EndsSession()
     {
-        var client = await LoginAsync("admin", "Demo-Admin-1");
+        var client = await LoginAsync(Fixtures.AdminEmail, Fixtures.AdminPassword);
         var token = await TokenAsync(client, "/");
         await client.PostAsync("/Account/Logout", new FormUrlEncodedContent(new Dictionary<string, string>
         {

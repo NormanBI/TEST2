@@ -1,0 +1,51 @@
+@model IReadOnlyList<BenutzerListItem>
+@{
+    ViewData["Title"] = "Benutzer";
+    string Ja(bool b) => b ? "Ja" : "Nein";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h1 class="h3 mb-0">Benutzer</h1>
+    <a class="btn btn-primary" asp-action="Create">Neuen Benutzer anlegen</a>
+</div>
+@if (TempData["Success"] is string ok)
+{
+    <div class="alert alert-success" role="status">@ok</div>
+}
+@if (TempData["Error"] is string fail)
+{
+    <div class="alert alert-danger" role="alert">@fail</div>
+}
+<p class="text-muted small">Benutzer können nicht gelöscht, sondern nur deaktiviert werden. Deaktivierte Benutzer können sich nicht anmelden; ihre Datensätze bleiben erhalten. Passwörter werden nicht gespeichert, sondern nur als gesalzener Einweg-Hash (nicht umkehrbar) und sind nie einsehbar.</p>
+
+<div class="table-responsive">
+    <table class="table table-striped align-middle">
+        <thead>
+            <tr>
+                <th>Name</th><th>Emailadresse</th><th>Kundennutzer</th><th>Rollen</th><th>Status</th><th class="text-end">Aktion</th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var u in Model)
+        {
+            var rollen = new List<string>();
+            if (u.Administrator) rollen.Add("Administrator");
+            if (u.Eigentuemer) rollen.Add("Eigentümer");
+            if (u.Steuerberater) rollen.Add("Steuerberater");
+            if (u.Sachbearbeiter) rollen.Add("Sachbearbeiter");
+            <tr>
+                <td>@u.Vorname @u.Nachname</td>
+                <td>@u.Emailadresse</td>
+                <td>@Ja(u.Kundennutzer)</td>
+                <td>@(rollen.Count == 0 ? "–" : string.Join(", ", rollen))</td>
+                <td>@if (u.Aktiv) { <span class="badge bg-success">Aktiv</span> } else { <span class="badge bg-secondary">Deaktiviert</span> }</td>
+                <td class="text-end">
+                    <form method="post" asp-action="@(u.Aktiv ? "Deaktivieren" : "Aktivieren")" asp-route-id="@u.Id" class="d-inline">
+                        <button type="submit" class="btn btn-sm @(u.Aktiv ? "btn-outline-danger" : "btn-outline-success")">@(u.Aktiv ? "Deaktivieren" : "Aktivieren")</button>
+                    </form>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>

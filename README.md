@@ -21,25 +21,33 @@ dotnet run --project src/Kanzlei.Web --urls http://localhost:5258
 
 Danach `http://localhost:5258` öffnen.
 
-## Demo-Zugänge (nur fiktiv, fest im Code hinterlegt)
+## Anmeldung und erster Administrator
 
-| Rolle | Benutzername | Passwort | Menü |
-|---|---|---|---|
-| Administration | `admin` | `Demo-Admin-1` | Stammdaten, Auswertungen, Einstellungen |
-| Steuerberater | `steuerberater` | `Demo-Steuerberater-1` | Stammdaten, Auswertungen |
-| Sachbearbeiter | `sachbearbeiter` | `Demo-Sachbearbeiter-1` | Stammdaten, Auswertungen |
+Es gibt **keine festen Demo-Zugänge und keine voreingestellten Passwörter** mehr. Konten liegen in MySQL (Tabelle `Benutzer`); die Anmeldung erfolgt mit Emailadresse und Passwort.
 
-Diese Zugangsdaten sind ausschließlich für die Demo gedacht und öffentlich dokumentiert. Nicht für echte Daten verwenden.
+1. Datenbank einrichten (`/Setup`, siehe „MySQL-Datenbank“).
+2. Existiert danach kein **aktiver Administrator**, leitet jede Seite auf `/Setup/Admin` um. Dort Vorname, Nachname, Emailadresse und Passwort (zweimal) für den ersten Administrator festlegen. Die Seite ist nur in diesem Zustand erreichbar (sonst 404); das Anlegen ist idempotent (es entsteht nie ein zweiter „Start“-Administrator). Das Klartext-Passwort wird weder in Konfigurationsdateien noch im Log gespeichert, sondern nur als Hash in MySQL.
+3. Anmelden; weitere Benutzer unter **Einstellungen > Benutzer** anlegen.
+
+**Wiederherstellung:** Sind alle Administratoren verloren (nicht möglich über die Oberfläche, da der letzte aktive Administrator nicht deaktiviert werden kann), kann in MySQL `UPDATE Benutzer SET Aktiv = 1 WHERE Administrator = 1` ausgeführt werden. Gibt es gar keinen Administrator mehr, startet beim nächsten Aufruf automatisch `/Setup/Admin`. Vergessene Passwörter: keine Selbstbedienung; ein Administrator legt ein neues Konto an (Passwort-Zurücksetzen ist noch nicht umgesetzt).
+
+## Benutzer, Rollen und Passwörter
+
+- **Tabelle `Benutzer`:** `Id`, `Vorname`, `Nachname`, `Emailadresse` (Pflicht), `EmailNormalisiert` (Großschreibung, eindeutiger Index → Emailadresse ist groß-/kleinschreibungsunabhängig eindeutig), `Kundennutzer` (Standard Nein), `PasswortHash`, `Administrator`, `Eigentuemer` (Anzeige „Eigentümer“), `Steuerberater`, `Sachbearbeiter`, `Aktiv` (Standard Ja), `ErstelltAm`, `GeaendertAm` (UTC). Migration `AddBenutzer` (nur `CREATE TABLE`/`CREATE INDEX`, nicht destruktiv).
+- **Passwörter werden nicht verschlüsselt, sondern gehasht:** Gespeichert wird ausschließlich ein gesalzener, adaptiver Einweg-Hash über ASP.NET Core `IPasswordHasher<Benutzer>` (PBKDF2-HMAC-SHA512, Salt pro Passwort). Eine umkehrbare Verschlüsselung würde bei Schlüsselverlust alle Passwörter preisgeben; ein Hash lässt sich nicht zurückrechnen und nur durch Vergleich prüfen. Der Hash wird nie angezeigt, protokolliert oder in Listen ausgegeben; Passwörter werden nie erneut ins Formular gerendert. Richtlinie: 12–128 Zeichen mit Groß-, Kleinbuchstaben und Ziffer.
+- **Rollen:** Die Claims leiten sich aus den vier Flags ab (`Administration`, `Eigentuemer`, `Steuerberater`, `Sachbearbeiter`). **Kundennutzer** ist nur eine Klassifizierung und erzeugt keine Rolle. Ein Benutzer ohne Rolle kann sich anmelden, hat aber keinen Zugriff auf rollengeschützte Bereiche. Derzeit erlauben Stammdaten/Auswertungen Administration, Steuerberater und Sachbearbeiter; Einstellungen und Benutzer nur Administration. `Eigentuemer` hat noch keine eigenen Berechtigungen.
+- **Deaktivieren statt Löschen:** Es gibt keine Löschfunktion (weder Route noch Button). Deaktivierte Benutzer können sich nicht anmelden; bestehende Sitzungen werden bei der nächsten Anfrage beendet (das Cookie wird bei jeder Anfrage gegen die Datenbank geprüft). Der letzte aktive Administrator kann nicht deaktiviert werden (Schutz gilt auch für den ersten Administrator; Absicherung per Sperre innerhalb einer Instanz, siehe Einzelinstanz-Annahme).
+- **Tests:** Benutzerlogik wird mit dem echten `EfBenutzerStore` gegen EF-Core-InMemory getestet; Schema und Migration werden anhand des MySQL-Provider-Skripts geprüft. Ein Test gegen einen echten MySQL-Server (z. B. eindeutiger Index) ist nicht enthalten.
 
 ## Architektur
 
 - ASP.NET Core MVC auf .NET 8, Projekt `src/Kanzlei.Web`, Tests in `tests/Kanzlei.Web.Tests` (xUnit, `WebApplicationFactory`).
-- Anmeldung über Cookie-Authentifizierung mit festen Demo-Benutzern (`Services/DemoUserStore.cs`); keine Benutzer in der Datenbank (das Sitzungs-Cookie ist ein reines Session-Cookie). Ohne MySQL-Konfiguration erscheint zuerst die Datenbank-Einrichtung (siehe „MySQL-Datenbank“).
-- Rollenprüfung serverseitig: Standardmäßig erfordert jede Seite eine Anmeldung (Fallback-Policy); `StammdatenController` und `AuswertungenController` erlauben alle drei Rollen, `EinstellungenController` nur `Administration` (nicht berechtigt: Weiterleitung zu `/Account/AccessDenied`, HTTP 403). Das Ausblenden des Menüpunkts ist nur zusätzlich.
+- Anmeldung über Cookie-Authentifizierung mit Benutzern aus MySQL (`Services/BenutzerStore.cs`, ersetzt den früheren `DemoUserStore`); das Sitzungs-Cookie ist ein reines Session-Cookie und wird bei jeder Anfrage auf aktiven Benutzer geprüft. Ohne MySQL-Konfiguration erscheint zuerst die Datenbank-Einrichtung (siehe „MySQL-Datenbank“).
+- Rollenprüfung serverseitig: Standardmäßig erfordert jede Seite eine Anmeldung (Fallback-Policy); `StammdatenController` und `AuswertungenController` erlauben alle drei Rollen, `EinstellungenController` und `BenutzerController` nur `Administration` (nicht berechtigt: Weiterleitung zu `/Account/AccessDenied`, HTTP 403). Das Ausblenden des Menüpunkts ist nur zusätzlich.
 - POST-Aktionen sind per Anti-Forgery-Token geschützt.
 - Layout-Editor (Administration, `Einstellungen > Layout`): 13 semantische Farb-Tokens als CSS-Variablen, strikt als `#rrggbb` validiert, ausgeliefert über `/theme.css`. Das Thema (`Services/ThemeService.cs`, Singleton) gilt für alle Benutzer und wird als CSS-Datei gespeichert (siehe Abschnitt „Theme-Persistenz“); es wird nichts nach `wwwroot` geschrieben. Siehe F-009.
 - Standardfarben (CSS-Variablen in `wwwroot/css/site.css`): Primär `#1f4e79`, Hintergrund `#f5f7fa`, Text `#212529`, Primär-Kontrast `#ffffff`.
-- Mandantenrolle, DATEV, Datenbank/sonstige Persistenz und funktionale Daten sind ausdrücklich nicht enthalten; einzige dauerhafte Daten sind die Theme-CSS-Datei.
+- Mandantenrolle, DATEV und funktionale Fachdaten sind ausdrücklich nicht enthalten; dauerhaft gespeichert werden Benutzerkonten (MySQL) und die Theme-CSS-Datei.
 
 ## Theme-Persistenz (Farbeinstellungen)
 
@@ -53,14 +61,15 @@ Diese Zugangsdaten sind ausschließlich für die Demo gedacht und öffentlich do
 
 ## MySQL-Datenbank (Ersteinrichtung und Persistenz)
 
-- **Ersteinrichtung:** Existiert keine gültige Datenbankkonfiguration, leitet jede Seite (auch die Anmeldung) auf `/Setup` um. Dort Server, Port (Standard 3306), Datenbank/Schema, Benutzer, Passwort und SSL/TLS (Aus/Bevorzugt/Erforderlich) eingeben. „Verbindung testen“ prüft nur; „Testen und speichern“ testet, wendet die EF-Core-Migrationen an und speichert **erst bei Erfolg**. Danach geht es zur Anmeldung. Die Datenbank/das Schema muss auf dem Server bereits existieren und der Benutzer benötigt Rechte zum Anlegen von Tabellen (`CREATE`, `ALTER`, `INDEX`, `INSERT`, `SELECT`, `UPDATE`, `DELETE`).
+- **Ersteinrichtung:** Existiert keine gültige Datenbankkonfiguration, leitet jede Seite (auch die Anmeldung) auf `/Setup` um. Dort Server, Port (Standard 3306), Datenbank/Schema, Benutzer, Passwort und SSL/TLS (Aus/Bevorzugt/Erforderlich) eingeben. „Verbindung testen“ prüft nur; „Testen und speichern“ testet, wendet die EF-Core-Migrationen an und speichert **erst bei Erfolg**. Danach geht es zur Anmeldung bzw. – ohne Administrator – zur Einrichtung des ersten Administrators. Die Datenbank/das Schema muss auf dem Server bereits existieren und der Benutzer benötigt Rechte zum Anlegen von Tabellen (`CREATE`, `ALTER`, `INDEX`, `INSERT`, `SELECT`, `UPDATE`, `DELETE`).
 - **Fehlermeldungen:** Sichere deutsche Hinweise (nicht erreichbar, Anmeldung fehlgeschlagen, Datenbank unbekannt, Zeitüberschreitung). Passwort und Verbindungszeichenfolge werden weder angezeigt noch protokolliert (Logs enthalten nur Fehlerkategorie, Ausnahmetyp und MySQL-Fehlercode). Eingaben werden validiert (Host/Datenbank nur Zeichenklassen, Längenlimits, Port 1–65535); die Verbindungszeichenfolge wird mit `MySqlConnectionStringBuilder` gebaut (kein Einschleusen weiterer Optionen). Anti-Forgery-Token, Request-Größenlimit (8 KB) und Rate-Limit (20 Anfragen/Minute je IP) schützen `/Setup`.
 - **Speicherort:** `App_Data/db-settings.json` (außerhalb `wwwroot`), konfigurierbar über `Database:ConfigFile` bzw. `DB_CONFIG_FILE`. Gespeichert werden Host, Port, Datenbank, Benutzer, SSL-Modus und das **mit ASP.NET Core Data Protection verschlüsselte Passwort**; nie die Verbindungszeichenfolge. Der Schlüsselbund liegt in `App_Data/keys` (`DataProtection:KeysPath` bzw. `DATAPROTECTION_KEYS_PATH`). Datei und Schlüsselbund werden mit 0600/0700 angelegt (Unix).
 - **Schutz und Sicherung:** Der Schlüsselbund wird auf Dateisystemebene **nicht** zusätzlich verschlüsselt (kein Zertifikat/DPAPI konfiguriert). Wer Konfigurationsdatei **und** Schlüsselbund lesen kann, kann das Passwort wiederherstellen. Beide Pfade nur für das Dienstkonto lesbar/schreibbar halten, nicht in dasselbe öffentliche Volume/Repository legen und gemeinsam (getrennt gesichert) sichern: Ohne Schlüsselbund ist die Datei nicht mehr entschlüsselbar. Für Produktion: Schlüsselschutz (z. B. X.509-Zertifikat, Key Vault) und ein Datenbankkonto mit minimalen Rechten einsetzen. `App_Data/` ist in `.gitignore`; nichts davon gehört ins Repository.
 - **Start:** Konfiguration wird geladen/entschlüsselt, Verbindung geprüft und ausstehende Migrationen werden automatisch angewendet (Einzelinstanz-Annahme; bei mehreren Instanzen Migrationen separat ausführen). Ist der Server vorübergehend nicht erreichbar, erscheint `/Setup/Status` (HTTP 503, Wiederholung nach höchstens 5 Sekunden) – die gespeicherte Konfiguration bleibt unverändert. Ist die Konfiguration unlesbar/beschädigt oder nicht entschlüsselbar, wird die Anmeldung gesperrt und eine Wiederherstellungsseite gezeigt; die Datei wird nie automatisch überschrieben.
 - **Wiederherstellung/Neukonfiguration:** Nach erfolgreicher Einrichtung ist `/Setup` nicht mehr erreichbar (404). Zum Ändern der Zugangsdaten lokal auf dem Server `db-settings.json` löschen (bei verlorenem Schlüsselbund ggf. auch den Ordner `keys`) und die App neu starten; danach beginnt die Einrichtung erneut. Eine Web-Oberfläche zur Neukonfiguration gibt es bewusst nicht.
-- **Schema/Migrationen:** `Data/AppDbContext.cs` (Pomelo.EntityFrameworkCore.MySql 8.0.3, passend zu EF Core 8; MySqlConnector 2.3.5) ist die Persistenzgrundlage ohne Entitäten; `Data/Migrations/InitialCreate` legt nur `__EFMigrationsHistory` an. Neue Migration: `dotnet ef migrations add <Name> -o Data/Migrations` im Ordner `src/Kanzlei.Web` (Tool `dotnet-ef` 8.x). Die Demo-Benutzer (`DemoUserStore`) bleiben unverändert im Code; das Farbthema bleibt in `App_Data/theme.css` und wird nicht in MySQL gespeichert.
+- **Schema/Migrationen:** `Data/AppDbContext.cs` (Pomelo.EntityFrameworkCore.MySql 8.0.3, passend zu EF Core 8; MySqlConnector 2.3.5) ist die Persistenzgrundlage mit der Entität `Benutzer`; `Data/Migrations/InitialCreate` legt nur `__EFMigrationsHistory` an, `AddBenutzer` die Tabelle `Benutzer`. Neue Migration: `dotnet ef migrations add <Name> -o Data/Migrations` im Ordner `src/Kanzlei.Web` (Tool `dotnet-ef` 8.x). Das Farbthema bleibt in `App_Data/theme.css` und wird nicht in MySQL gespeichert.
 - **Tests:** Laufen ohne MySQL mit Fakes (`TestSupport.cs`). Ein echter MySQL-Test ist nicht enthalten.
+
 
 ## Abhängigkeiten und Syncfusion-Lizenz
 

@@ -24,6 +24,37 @@ public class SetupController : Controller
     [HttpPost]
     public Task<IActionResult> Save(DbSetupViewModel model, CancellationToken ct) => Run(model, save: true, ct);
 
+    // Erster Start: Initialen Administrator festlegen. Das Passwort wird nur als Hash in der Datenbank gespeichert.
+    [HttpGet]
+    public IActionResult Admin() => View(new AdminSetupViewModel());
+
+    [HttpPost]
+    public async Task<IActionResult> Admin(AdminSetupViewModel model, CancellationToken ct)
+    {
+        model.Vorname = model.Vorname?.Trim() ?? "";
+        model.Nachname = model.Nachname?.Trim() ?? "";
+        model.Emailadresse = model.Emailadresse?.Trim() ?? "";
+        if (ModelState.GetValidationState(nameof(model.Passwort)) == Microsoft.AspNetCore.Mvc.ModelBinding.ModelValidationState.Valid)
+        {
+            var pw = PasswordPolicy.Validate(model.Passwort);
+            if (pw is not null) ModelState.AddModelError(nameof(model.Passwort), pw);
+            else if (model.Passwort != model.PasswortWiederholung)
+                ModelState.AddModelError(nameof(model.PasswortWiederholung), "Die Passwörter stimmen nicht überein.");
+        }
+        if (ModelState.IsValid)
+        {
+            var result = await _state.CreateInitialAdministratorAsync(
+                new NeuerBenutzer(model.Vorname, model.Nachname, model.Emailadresse, model.Passwort, false, true, false, false, false), ct);
+            if (result is BenutzerResult.Ok or BenutzerResult.AdministratorExists) return RedirectToAction("Login", "Account");
+            if (result == BenutzerResult.DuplicateEmail)
+                ModelState.AddModelError(nameof(model.Emailadresse), "Diese Emailadresse wird bereits verwendet.");
+        }
+        model.Passwort = ""; model.PasswortWiederholung = "";
+        foreach (var key in new[] { nameof(model.Passwort), nameof(model.PasswortWiederholung) })
+            if (ModelState.TryGetValue(key, out var entry)) { entry.RawValue = ""; entry.AttemptedValue = ""; }
+        return View(model);
+    }
+
     [HttpGet]
     public IActionResult Status()
     {
@@ -53,7 +84,8 @@ public class SetupController : Controller
         catch (IOException) { result = new DbTestResult(DbTestOutcome.Other); model.ResultMessage = "Die Konfiguration konnte nicht gespeichert werden. Bitte Schreibrechte prüfen."; return Respond(model); }
         catch (UnauthorizedAccessException) { model.ResultMessage = "Die Konfiguration konnte nicht gespeichert werden. Bitte Schreibrechte prüfen."; return Respond(model); }
 
-        if (result.Success && save) return RedirectToAction("Login", "Account");
+        if (result.Success && save)
+            return _state.Status == DatabaseStatus.AdminRequired ? RedirectToAction(nameof(Admin)) : RedirectToAction("Login", "Account");
 
         model.ResultSuccess = result.Success;
         model.ResultMessage = result.Success ? "Verbindung erfolgreich. Zum Übernehmen „Speichern“ wählen." : result.Message;
