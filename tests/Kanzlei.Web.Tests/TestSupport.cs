@@ -43,6 +43,8 @@ public static class Fixtures
     public const string AdminPassword = "Admin-Passwort-1";
     public const string BeraterEmail = "berater@kanzlei.test";
     public const string BeraterPassword = "Berater-Passwort-1";
+    public const string EigentuemerEmail = "eigentuemer@kanzlei.test";
+    public const string EigentuemerPassword = "Eigentuemer-Passwort-1";
     public const string SachbearbeiterEmail = "sachbearbeiter@kanzlei.test";
     public const string SachbearbeiterPassword = "Sachbearbeiter-Passwort-1";
     public static readonly DbConnectionSettings Sample = new("db.example", 3306, "kanzlei", "app", "S3cret!pw", DbSslMode.Preferred);
@@ -67,13 +69,13 @@ public sealed class InMemoryDbContextFactory : IAppDbContextFactory
         db.SaveChanges();
     }
 
-    public void Add(string vorname, string nachname, string email, string password, bool administrator = false, bool steuerberater = false, bool sachbearbeiter = false)
+    public void Add(string vorname, string nachname, string email, string password, bool administrator = false, bool steuerberater = false, bool sachbearbeiter = false, bool eigentuemer = false)
     {
         using var db = Create();
         var user = new Benutzer
         {
             Vorname = vorname, Nachname = nachname, Emailadresse = email, EmailNormalisiert = Benutzer.Normalisieren(email),
-            Administrator = administrator, Steuerberater = steuerberater, Sachbearbeiter = sachbearbeiter,
+            Administrator = administrator, Eigentuemer = eigentuemer, Steuerberater = steuerberater, Sachbearbeiter = sachbearbeiter,
         };
         user.PasswortHash = new PasswordHasher<Benutzer>().HashPassword(user, password);
         db.Benutzer.Add(user);
@@ -90,6 +92,7 @@ public class TestAppFactory : WebApplicationFactory<Program>
     public InMemoryDbContextFactory Contexts { get; } = new();
     public bool SeedUsers { get; set; } = true;
     public bool SeedMail { get; set; } = true;
+    public bool SeedOwner { get; set; }
     public FakeMailTester MailTester { get; } = new();
 
     public IBenutzerStore Users => Services.GetRequiredService<IBenutzerStore>();
@@ -106,6 +109,7 @@ public class TestAppFactory : WebApplicationFactory<Program>
         if (!SeedUsers) return;
         Contexts.Add("Ada", "Admin", Fixtures.AdminEmail, Fixtures.AdminPassword, administrator: true);
         Contexts.Add("Bert", "Berater", Fixtures.BeraterEmail, Fixtures.BeraterPassword, steuerberater: true);
+        if (SeedOwner) Contexts.Add("Egon", "Eigentuemer", Fixtures.EigentuemerEmail, Fixtures.EigentuemerPassword, eigentuemer: true);
         Contexts.Add("Sabine", "Sachbearbeiter", Fixtures.SachbearbeiterEmail, Fixtures.SachbearbeiterPassword, sachbearbeiter: true);
     }
 

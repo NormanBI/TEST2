@@ -11,6 +11,8 @@ public class AppDbContext : DbContext
     public DbSet<Einstellungen> Einstellungen => Set<Einstellungen>();
     public DbSet<MasterClient> MasterClients => Set<MasterClient>();
     public DbSet<BenutzerDashboardLayout> BenutzerDashboardLayouts => Set<BenutzerDashboardLayout>();
+    public DbSet<Mandantengruppe> Mandantengruppen => Set<Mandantengruppe>();
+    public DbSet<MandantengruppeMitglied> MandantengruppeMitglieder => Set<MandantengruppeMitglied>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -111,6 +113,24 @@ public class AppDbContext : DbContext
             e.Property(x => x.LayoutJson).IsRequired().HasMaxLength(BenutzerDashboardLayout.LayoutJsonMaxLaenge);
             e.HasIndex(x => x.BenutzerId).IsUnique();
             e.HasOne(x => x.Benutzer).WithMany().HasForeignKey(x => x.BenutzerId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Mandantengruppe>(e =>
+        {
+            e.ToTable("Mandantengruppen");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Name).IsRequired().HasMaxLength(Mandantengruppe.NameMaxLaenge);
+            e.Property(x => x.NameNormalisiert).IsRequired().HasMaxLength(Mandantengruppe.NameMaxLaenge);
+            e.HasIndex(x => x.NameNormalisiert).IsUnique();
+        });
+
+        modelBuilder.Entity<MandantengruppeMitglied>(e =>
+        {
+            e.ToTable("MandantengruppeMitglieder");
+            e.HasKey(x => x.MasterClientId);
+            e.Property(x => x.MasterClientId).HasColumnType("varchar(450)").HasMaxLength(450).ValueGeneratedNever();
+            e.HasOne(x => x.Mandantengruppe).WithMany(g => g.Mitglieder).HasForeignKey(x => x.MandantengruppeId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<MasterClient>().WithMany().HasForeignKey(x => x.MasterClientId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

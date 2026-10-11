@@ -33,6 +33,10 @@
                                         <span class="dropdown-header" id="navAuswertungenStammdaten">Stammdaten</span>
                                         <ul class="list-unstyled mb-0" role="group" aria-labelledby="navAuswertungenStammdaten">
                                             <li><a class="dropdown-item nav-submenu-item" asp-controller="Auswertungen" asp-action="Mandanten">Mandanten</a></li>
+                                            @if (User.IsInRole(Roles.Administration) || User.IsInRole(Roles.Eigentuemer) || User.IsInRole(Roles.Steuerberater))
+                                            {
+                                                <li><a class="dropdown-item nav-submenu-item" asp-controller="Mandantengruppen" asp-action="Index">Mandantengruppen</a></li>
+                                            }
                                         </ul>
                                     </li>
                                 </ul>
