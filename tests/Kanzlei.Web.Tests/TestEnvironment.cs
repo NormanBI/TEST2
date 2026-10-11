@@ -6,7 +6,11 @@ namespace Kanzlei.Web.Tests;
 internal static class TestEnvironment
 {
     [ModuleInitializer]
-    internal static void Init() =>
-        Environment.SetEnvironmentVariable("THEME_CSS_FILE",
-            Path.Combine(Path.GetTempPath(), "kanzlei-tests", Guid.NewGuid().ToString("N"), "theme.css"));
+    internal static void Init()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "kanzlei-tests", Guid.NewGuid().ToString("N"));
+        Environment.SetEnvironmentVariable("THEME_CSS_FILE", Path.Combine(root, "theme.css"));
+        Environment.SetEnvironmentVariable("DB_CONFIG_FILE", Path.Combine(root, "db-settings.json"));
+        Environment.SetEnvironmentVariable("DATAPROTECTION_KEYS_PATH", Path.Combine(root, "keys"));
+    }
 }
