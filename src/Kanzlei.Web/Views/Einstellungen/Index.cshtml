@@ -1,6 +1,24 @@
 @{
     ViewData["Title"] = "Einstellungen";
+    var kacheln = new[]
+    {
+        (Id: "kachel-layout", Url: Url.Action("Layout", "Einstellungen")!, Titel: "Layout", Text: "Farben und Navigationstext der Oberfläche anpassen.", Row: 0, Col: 0),
+        (Id: "kachel-benutzer", Url: Url.Action("Index", "Benutzer")!, Titel: "Benutzer", Text: "Benutzerkonten anlegen, einsehen und deaktivieren.", Row: 0, Col: 1),
+        (Id: "kachel-mailserver", Url: Url.Action("Mailserver", "Einstellungen")!, Titel: "Mailserver", Text: "SMTP-Zugangsdaten für den E-Mail-Versand verwalten.", Row: 1, Col: 0),
+    };
+    string Inhalt(string url, string titel, string text) =>
+        $"<a class=\"settings-tile-link\" href=\"{System.Net.WebUtility.HtmlEncode(url)}\"><span class=\"settings-tile-title\">{titel}</span><span class=\"settings-tile-text\">{text}</span></a>";
 }
 
-<h1 class="h3">Einstellungen</h1>
-<p class="text-muted">Platzhalter – diese Funktion ist im ersten Prototyp noch nicht umgesetzt.</p>
+<h1 class="h3 mb-3">Einstellungen</h1>
+
+<ejs-dashboardlayout id="einstellungen-kacheln" columns="2" cellSpacing="@(new double[] { 16, 16 })" cellAspectRatio="2.2"
+                     allowDragging="false" allowResizing="false" allowFloating="false" mediaQuery="max-width: 767px">
+    <e-dashboardlayout-panels>
+        @foreach (var k in kacheln)
+        {
+            <e-dashboardlayout-panel id="@k.Id" cssClass="settings-tile" row="@k.Row" column="@k.Col" sizeX="1" sizeY="1"
+                                     content="@Inhalt(k.Url, k.Titel, k.Text)"></e-dashboardlayout-panel>
+        }
+    </e-dashboardlayout-panels>
+</ejs-dashboardlayout>
