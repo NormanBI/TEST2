@@ -25,7 +25,18 @@
                     <div class="collapse navbar-collapse" id="mainNav">
                         <ul class="navbar-nav me-auto">
                             <li class="nav-item"><a class="nav-link" asp-controller="Stammdaten" asp-action="Index">Stammdaten</a></li>
-                            <li class="nav-item"><a class="nav-link" asp-controller="Auswertungen" asp-action="Index">Auswertungen</a></li>
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" id="navAuswertungen" role="button" data-bs-toggle="dropdown" aria-expanded="false">Auswertungen</a>
+                                <ul class="dropdown-menu" aria-labelledby="navAuswertungen">
+                                    <li><a class="dropdown-item" asp-controller="Auswertungen" asp-action="Index">Übersicht</a></li>
+                                    <li role="presentation">
+                                        <span class="dropdown-header" id="navAuswertungenStammdaten">Stammdaten</span>
+                                        <ul class="list-unstyled mb-0" role="group" aria-labelledby="navAuswertungenStammdaten">
+                                            <li><a class="dropdown-item nav-submenu-item" asp-controller="Auswertungen" asp-action="Mandanten">Mandanten</a></li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </li>
                             @if (User.IsInRole(Roles.Administration))
                             {
                                 <li class="nav-item dropdown">

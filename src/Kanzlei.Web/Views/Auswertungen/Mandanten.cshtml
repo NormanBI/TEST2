@@ -1,0 +1,48 @@
+@model IReadOnlyList<PanelLayout>
+@{
+    ViewData["Title"] = "Mandanten-Auswertungen";
+    PanelLayout P(string id) => Model.First(p => p.Id == id);
+    var status = P(MandantenLayout.StatusPanel);
+    var typ = P(MandantenLayout.TypPanel);
+    string Chart(string id) => $"<div id=\"{id}\" class=\"mandanten-chart\"></div>";
+}
+
+<nav aria-label="Brotkrumen">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-controller="Auswertungen" asp-action="Index">Auswertungen</a></li>
+        <li class="breadcrumb-item">Stammdaten</li>
+        <li class="breadcrumb-item active" aria-current="page">Mandanten</li>
+    </ol>
+</nav>
+
+<h1 class="h3 mb-3">Mandanten</h1>
+<p class="text-muted">Klicken Sie auf ein Tortenstück, um das andere Diagramm danach zu filtern. Die Kacheln lassen sich verschieben und in der Größe ändern; Ihre Anordnung wird für Ihr Benutzerkonto gespeichert.</p>
+
+<div class="mandanten-filter d-flex flex-wrap align-items-center gap-2 mb-3">
+    <div id="mandanten-filter-anzeige" class="mandanten-filter-anzeige" role="status" aria-live="polite">Kein Filter aktiv.</div>
+    <button type="button" id="mandanten-filter-reset" class="btn btn-outline-secondary btn-sm" hidden>Filter zurücksetzen</button>
+    <form asp-action="MandantenLayoutZuruecksetzen" method="post" class="ms-auto">
+        <button type="submit" class="btn btn-outline-secondary btn-sm">Layout zurücksetzen</button>
+    </form>
+</div>
+<div id="mandanten-meldung" class="small text-muted mb-2" role="status" aria-live="polite"></div>
+
+<div id="mandanten-daten" data-daten-url="@Url.Action("MandantenDaten", "Auswertungen")" data-layout-url="@Url.Action("MandantenLayoutSpeichern", "Auswertungen")">
+    @Html.AntiForgeryToken()
+</div>
+
+<ejs-dashboardlayout id="mandanten-dashboard" columns="12" cellSpacing="@(new double[] { 16, 16 })" cellAspectRatio="1.2"
+                     allowDragging="true" allowResizing="true" allowFloating="false" mediaQuery="max-width: 767px" cssClass="mandanten-dashboard">
+    <e-dashboardlayout-panels>
+        <e-dashboardlayout-panel id="@MandantenLayout.StatusPanel" cssClass="mandanten-panel" header="Mandanten nach Status"
+                                 row="@status.Row" col="@status.Col" sizeX="@status.SizeX" sizeY="@status.SizeY" minSizeX="3" minSizeY="3"
+                                 content="@Chart("chart-status")"></e-dashboardlayout-panel>
+        <e-dashboardlayout-panel id="@MandantenLayout.TypPanel" cssClass="mandanten-panel" header="Mandanten nach Typ"
+                                 row="@typ.Row" col="@typ.Col" sizeX="@typ.SizeX" sizeY="@typ.SizeY" minSizeX="3" minSizeY="3"
+                                 content="@Chart("chart-typ")"></e-dashboardlayout-panel>
+    </e-dashboardlayout-panels>
+</ejs-dashboardlayout>
+
+@section Scripts {
+    <script src="~/js/mandanten-auswertung.js" asp-append-version="true"></script>
+}
