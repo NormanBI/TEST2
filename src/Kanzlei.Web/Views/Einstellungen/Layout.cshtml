@@ -6,14 +6,22 @@
 
 <h1 class="h3">Einstellungen – Layout</h1>
 <div class="alert alert-info" role="note">
-    Die Farben werden nur im Arbeitsspeicher der laufenden Anwendung gehalten und gelten für alle angemeldeten Benutzer.
-    Es gibt keine dauerhafte Speicherung: Nach einem Neustart der Anwendung gelten wieder die Standardfarben.
+    Die Farben werden als CSS-Datei auf dem Server gespeichert und gelten für alle angemeldeten Benutzer.
+    Sie bleiben auch nach einem Neustart der Anwendung erhalten; „Zurücksetzen“ speichert die Standardfarben.
 </div>
 @if (TempData["Success"] is string ok)
 {
     <div class="alert alert-success" role="status">@ok</div>
 }
-@if (Model.Errors.Count > 0)
+@if (TempData["Error"] is string fail)
+{
+    <div class="alert alert-danger" role="alert">@fail</div>
+}
+@if (Model.Errors.TryGetValue(ThemeService.PersistErrorKey, out var persistError))
+{
+    <div class="alert alert-danger" role="alert">@persistError</div>
+}
+@if (Model.Errors.Keys.Any(k => k != ThemeService.PersistErrorKey))
 {
     <div class="alert alert-danger" role="alert">Einige Farbwerte sind ungültig und wurden nicht übernommen.</div>
 }

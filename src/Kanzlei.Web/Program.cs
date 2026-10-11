@@ -35,7 +35,15 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddControllersWithViews(options =>
     options.Filters.Add(new Microsoft.AspNetCore.Mvc.AutoValidateAntiforgeryTokenAttribute()));
 
-builder.Services.AddSingleton<IThemeService, ThemeService>();
+// Speicherort der Theme-CSS-Datei: THEME_CSS_FILE bzw. Theme:CssFile, Standard App_Data/theme.css unter dem Content-Root (außerhalb wwwroot).
+builder.Services.AddSingleton<IThemeService>(sp =>
+{
+    var configured = builder.Configuration["THEME_CSS_FILE"] ?? builder.Configuration["Theme:CssFile"];
+    var path = string.IsNullOrWhiteSpace(configured)
+        ? Path.Combine(builder.Environment.ContentRootPath, "App_Data", "theme.css")
+        : Path.GetFullPath(configured, builder.Environment.ContentRootPath);
+    return new ThemeService(path, sp.GetRequiredService<ILogger<ThemeService>>());
+});
 
 var app = builder.Build();
 
