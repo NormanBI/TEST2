@@ -26,8 +26,9 @@ Danach `http://localhost:5258` öffnen.
 Es gibt **keine festen Demo-Zugänge und keine voreingestellten Passwörter** mehr. Konten liegen in MySQL (Tabelle `Benutzer`); die Anmeldung erfolgt mit Emailadresse und Passwort.
 
 1. Datenbank einrichten (`/Setup`, siehe „MySQL-Datenbank“).
-2. Existiert danach kein **aktiver Administrator**, leitet jede Seite auf `/Setup/Admin` um. Dort Vorname, Nachname, Emailadresse und Passwort (zweimal) für den ersten Administrator festlegen. Die Seite ist nur in diesem Zustand erreichbar (sonst 404); das Anlegen ist idempotent (es entsteht nie ein zweiter „Start“-Administrator). Das Klartext-Passwort wird weder in Konfigurationsdateien noch im Log gespeichert, sondern nur als Hash in MySQL.
-3. Anmelden; weitere Benutzer unter **Einstellungen > Benutzer** anlegen.
+2. Mailserver einrichten (`/Setup/Mail`, siehe „Mailserver“); ohne gültige Mail-Einstellungen sind Administrator-Einrichtung und Anmeldung nicht erreichbar.
+3. Existiert danach kein **aktiver Administrator**, leitet jede Seite auf `/Setup/Admin` um. Dort Vorname, Nachname, Emailadresse und Passwort (zweimal) für den ersten Administrator festlegen. Die Seite ist nur in diesem Zustand erreichbar (sonst 404); das Anlegen ist idempotent (es entsteht nie ein zweiter „Start“-Administrator). Das Klartext-Passwort wird weder in Konfigurationsdateien noch im Log gespeichert, sondern nur als Hash in MySQL.
+4. Anmelden; weitere Benutzer unter **Einstellungen > Benutzer** anlegen.
 
 **Wiederherstellung:** Sind alle Administratoren verloren (nicht möglich über die Oberfläche, da der letzte aktive Administrator nicht deaktiviert werden kann), kann in MySQL `UPDATE Benutzer SET Aktiv = 1 WHERE Administrator = 1` ausgeführt werden. Gibt es gar keinen Administrator mehr, startet beim nächsten Aufruf automatisch `/Setup/Admin`. Vergessene Passwörter: keine Selbstbedienung; ein Administrator legt ein neues Konto an (Passwort-Zurücksetzen ist noch nicht umgesetzt).
 
@@ -71,9 +72,20 @@ Es gibt **keine festen Demo-Zugänge und keine voreingestellten Passwörter** me
 - **Tests:** Laufen ohne MySQL mit Fakes (`TestSupport.cs`). Ein echter MySQL-Test ist nicht enthalten.
 
 
+## Mailserver (SMTP-Einstellungen)
+
+Grundlage für ein späteres Passwort-Zurücksetzen. Es werden **keine** E-Mails versendet und es gibt keine Passwort-Zurücksetzen-Endpunkte.
+
+- **Tabelle `MailEinstellungen`** (Migration `AddMailEinstellungen`, additiv): Singleton-Datensatz (`Id = 1`, per Check-Constraint erzwungen) mit `SmtpHost`, `SmtpPort`, `Benutzername`, `PasswortVerschluesselt`, `AbsenderEmail`, `AbsenderName`, `SslModus` (`Keine`, `StartTls`, `SslBeiVerbindung`), `Aktiv`, `Konfiguriert`, `LetzterTestAm`, `ErstelltAm`, `GeaendertAm` (UTC).
+- **Ersteinrichtung:** Reihenfolge Datenbank → Mailserver (`/Setup/Mail`) → erster Administrator (`/Setup/Admin`) → Anmeldung. „Verbindung testen“ prüft nur; „Testen und speichern“ speichert **erst nach erfolgreichem Test**. Diese Seite ist wie die Datenbank-Einrichtung bewusst **unauthentifiziert** (es existiert noch kein Konto), aber nur im Status „Mailserver fehlt“ erreichbar; danach Weiterleitung bzw. 404. Wer die Anwendung vor Abschluss der Ersteinrichtung im Netz erreicht, kann den Mailserver festlegen – die Ersteinrichtung daher nur in vertrauenswürdigem Netz durchführen. Anti-Forgery, Request-Größenlimit (8 KB), Rate-Limit (20/Minute je IP) und Eingabevalidierung gelten.
+- **Bearbeiten:** **Einstellungen > Mailserver** (nur Administration, serverseitig für jede Aktion geprüft, POST mit Anti-Forgery). Leeres Passwortfeld behält das gespeicherte Passwort (der Test nutzt es); gespeichertes Passwort/Chiffrat wird nie ausgegeben. Änderungen werden erst nach erfolgreichem Test gespeichert.
+- **TLS/Test:** MailKit 4.18.1 (hinter `IMailConnectionTester`, in Tests ersetzt). Modi: STARTTLS (erforderlich, Standard, Port 587), SSL/TLS (Port 465) oder keine Verschlüsselung – Letzteres nur ohne Anmeldedaten. Zertifikate werden vom System geprüft. Verbindungsaufbau/Anmeldung sind auf 10 Sekunden begrenzt. Es wird nur verbunden und ggf. angemeldet. Meldungen sind deutsch; Passwörter, Ausnahmetexte und Verbindungszeichenfolgen werden nie angezeigt oder protokolliert.
+- **Verschlüsselung:** Passwort per ASP.NET Core Data Protection (Purpose `Kanzlei.Web.MailSettings.Password.v1`) mit dem bereits persistierten Schlüsselbund (`App_Data/keys`) verschlüsselt in MySQL. Wer Datenbank **und** Schlüsselbund lesen kann, kann das Passwort wiederherstellen; beide getrennt schützen und gemeinsam sichern. Keine Zugangsdaten ins Repository.
+- **Wiederherstellung/Grenzen:** Lässt sich das Passwort nicht entschlüsseln (Schlüsselbund fehlt/anderer Schlüsselbund) oder sind die Werte ungültig, wird fail-closed gemeldet: beim Start Statusseite `/Setup/Status` (HTTP 503), in der Einstellungsseite HTTP 503; der Datensatz wird nie überschrieben. Abhilfe: Schlüsselbund wiederherstellen, oder – bewusst – die Zeile in `MailEinstellungen` löschen und die App neu starten, um die Einrichtung neu zu beginnen. Ist der SMTP-Server nur vorübergehend nicht erreichbar, bleiben die Einstellungen unverändert und die App läuft weiter (nur der Test meldet einen Fehler). Die Erreichbarkeit wird nicht beim Start geprüft; `Aktiv` ist derzeit immer Ja; kein Test gegen echten SMTP-/MySQL-Server.
+
 ## Abhängigkeiten und Syncfusion-Lizenz
 
-- NuGet: `Syncfusion.EJ2.AspNet.Core` 35.1.39 (Kalender-Widget `ejs-calendar`), `Pomelo.EntityFrameworkCore.MySql` 8.0.3, `Microsoft.EntityFrameworkCore.Relational`/`.Design` 8.0.31, `Microsoft.AspNetCore.Mvc.Testing` (nur Tests). Bootstrap/jQuery liegen unter `wwwroot/lib`.
+- NuGet: `Syncfusion.EJ2.AspNet.Core` 35.1.39 (Kalender-Widget `ejs-calendar`), `Pomelo.EntityFrameworkCore.MySql` 8.0.3, `MailKit` 4.18.1, `Microsoft.EntityFrameworkCore.Relational`/`.Design` 8.0.31, `Microsoft.AspNetCore.Mvc.Testing` (nur Tests). Bootstrap/jQuery liegen unter `wwwroot/lib`.
 - Syncfusion-Skripte und -Styles (`ej2.min.js`, `bootstrap5.css`) werden von `cdn.syncfusion.com` in derselben Version geladen (bei Paket-Update die Version in `Views/Shared/_Layout.cshtml` mitziehen).
 - Syncfusion ist kommerziell lizenziert (ggf. kostenlose Community-Lizenz). Ohne Lizenzschlüssel läuft die App, zeigt aber einen Lizenzhinweis. Schlüssel **nie committen**, sondern per Umgebungsvariable setzen:
   `export SYNCFUSION_LICENSE_KEY="<Ihr Schlüssel>"` (alternativ User-Secrets `Syncfusion:LicenseKey`).

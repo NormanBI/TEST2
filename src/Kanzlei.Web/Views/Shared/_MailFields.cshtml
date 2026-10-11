@@ -1,0 +1,48 @@
+@model Kanzlei.Web.Models.MailSetupViewModel
+
+<div asp-validation-summary="ModelOnly" class="text-danger"></div>
+<div class="row g-3">
+    <div class="col-12 col-sm-8">
+        <label asp-for="Host" class="form-label"></label>
+        <input asp-for="Host" class="form-control" maxlength="255" autocomplete="off" />
+        <span asp-validation-for="Host" class="text-danger"></span>
+    </div>
+    <div class="col-12 col-sm-4">
+        <label asp-for="Port" class="form-label"></label>
+        <input asp-for="Port" class="form-control" type="number" min="1" max="65535" />
+        <span asp-validation-for="Port" class="text-danger"></span>
+    </div>
+    <div class="col-12">
+        <label asp-for="Tls" class="form-label"></label>
+        <select asp-for="Tls" class="form-select">
+            <option value="StartTls">STARTTLS (empfohlen, meist Port 587)</option>
+            <option value="SslBeiVerbindung">SSL/TLS (meist Port 465)</option>
+            <option value="Keine">Keine (nur ohne Anmeldedaten)</option>
+        </select>
+        <span asp-validation-for="Tls" class="text-danger"></span>
+    </div>
+    <div class="col-12 col-sm-6">
+        <label asp-for="UserName" class="form-label"></label>
+        <input asp-for="UserName" class="form-control" maxlength="255" autocomplete="off" />
+        <span asp-validation-for="UserName" class="text-danger"></span>
+    </div>
+    <div class="col-12 col-sm-6">
+        <label asp-for="Password" class="form-label"></label>
+        <input asp-for="Password" class="form-control" type="password" maxlength="256" autocomplete="new-password" value="" />
+        @if (Model.IsEdit && Model.HasStoredPassword)
+        {
+            <div class="form-text">Ein Passwort ist gespeichert. Leer lassen, um es beizubehalten.</div>
+        }
+        <span asp-validation-for="Password" class="text-danger"></span>
+    </div>
+    <div class="col-12 col-sm-6">
+        <label asp-for="SenderEmail" class="form-label"></label>
+        <input asp-for="SenderEmail" class="form-control" type="email" maxlength="254" autocomplete="off" />
+        <span asp-validation-for="SenderEmail" class="text-danger"></span>
+    </div>
+    <div class="col-12 col-sm-6">
+        <label asp-for="SenderName" class="form-label"></label>
+        <input asp-for="SenderName" class="form-control" maxlength="100" autocomplete="off" />
+        <span asp-validation-for="SenderName" class="text-danger"></span>
+    </div>
+</div>

@@ -7,6 +7,7 @@ public class AppDbContext : DbContext
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
     public DbSet<Benutzer> Benutzer => Set<Benutzer>();
+    public DbSet<MailEinstellungen> MailEinstellungen => Set<MailEinstellungen>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -27,6 +28,21 @@ public class AppDbContext : DbContext
             // Sentinel true, damit ein ausdrücklich gesetztes false (deaktiviert) nicht vom Datenbank-Default überschrieben wird.
             e.Property(b => b.Aktiv).HasDefaultValue(true).HasSentinel(true);
             e.HasIndex(b => b.EmailNormalisiert).IsUnique();
+        });
+
+        modelBuilder.Entity<MailEinstellungen>(e =>
+        {
+            e.ToTable("MailEinstellungen", t => t.HasCheckConstraint("CK_MailEinstellungen_Singleton", "`Id` = 1"));
+            e.HasKey(m => m.Id);
+            e.Property(m => m.Id).ValueGeneratedNever();
+            e.Property(m => m.SmtpHost).IsRequired().HasMaxLength(255);
+            e.Property(m => m.Benutzername).HasMaxLength(255);
+            e.Property(m => m.PasswortVerschluesselt).HasMaxLength(2048);
+            e.Property(m => m.AbsenderEmail).IsRequired().HasMaxLength(254);
+            e.Property(m => m.AbsenderName).IsRequired().HasMaxLength(100);
+            e.Property(m => m.SslModus).HasConversion<string>().HasMaxLength(20);
+            e.Property(m => m.Aktiv).HasDefaultValue(true).HasSentinel(true);
+            e.Property(m => m.Konfiguriert).HasDefaultValue(false);
         });
     }
 }

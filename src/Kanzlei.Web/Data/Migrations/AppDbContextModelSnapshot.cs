@@ -98,6 +98,69 @@ namespace Kanzlei.Web.Data.Migrations
 
                     b.ToTable("Benutzer", (string)null);
                 });
+
+            modelBuilder.Entity("Kanzlei.Web.Data.MailEinstellungen", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("int");
+
+                    b.Property<string>("AbsenderEmail")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("varchar(254)");
+
+                    b.Property<string>("AbsenderName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<bool>("Aktiv")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("Benutzername")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<DateTime>("ErstelltAm")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("GeaendertAm")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("Konfiguriert")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(false);
+
+                    b.Property<DateTime?>("LetzterTestAm")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("PasswortVerschluesselt")
+                        .HasMaxLength(2048)
+                        .HasColumnType("varchar(2048)");
+
+                    b.Property<string>("SmtpHost")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<int>("SmtpPort")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SslModus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("MailEinstellungen", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_MailEinstellungen_Singleton", "`Id` = 1");
+                        });
+                });
 #pragma warning restore 612, 618
         }
     }

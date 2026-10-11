@@ -3,11 +3,16 @@
     ViewData["Title"] = "Datenbank nicht verfügbar";
 }
 
-<h1 class="h3 text-danger">Datenbank nicht verfügbar</h1>
+<h1 class="h3 text-danger">@(Model == Kanzlei.Web.Services.DatabaseStatus.MailConfigUnreadable ? "Mailserver-Einstellungen nicht lesbar" : "Datenbank nicht verfügbar")</h1>
 @if (Model == Kanzlei.Web.Services.DatabaseStatus.ConfigUnreadable)
 {
     <p>Die gespeicherte Datenbankkonfiguration kann nicht gelesen oder entschlüsselt werden (z. B. fehlender Schlüsselbund, beschädigte Datei). Die Anmeldung ist deshalb gesperrt.</p>
     <p>Bitte stellen Sie den Schlüsselbund aus der Datensicherung wieder her oder löschen Sie die Konfigurationsdatei auf dem Server (siehe README, Abschnitt „Wiederherstellung“), um die Einrichtung neu zu starten. Details stehen ohne Zugangsdaten im Server-Log.</p>
+}
+else if (Model == Kanzlei.Web.Services.DatabaseStatus.MailConfigUnreadable)
+{
+    <p>Die gespeicherten Mailserver-Einstellungen können nicht gelesen oder entschlüsselt werden (z. B. fehlender Schlüsselbund). Sie wurden nicht verändert; die Anmeldung ist vorläufig gesperrt.</p>
+    <p>Bitte stellen Sie den Schlüsselbund aus der Datensicherung wieder her (siehe README, Abschnitt „Mailserver“). Details stehen ohne Zugangsdaten im Server-Log.</p>
 }
 else
 {

@@ -164,6 +164,21 @@ Benutzerkonten liegen in MySQL (Tabelle `Benutzer`) und werden unter Einstellung
 - Serverseitige Autorisierung (nur Administration) für alle Aktionen; POSTs mit Anti-Forgery-Token; deutsche, responsive Oberfläche mit deutschen Feldfehlern (Pflichtfelder, E-Mail-Format, Passwortrichtlinie, doppelte Emailadresse).
 - Migration `AddBenutzer` (additiv, MySQL/Pomelo). Bekannte Grenzen: kein Bearbeiten/Passwort-Zurücksetzen, keine Rollenänderung nach dem Anlegen, Sperre für die Letzter-Administrator-Regel nur innerhalb einer Instanz.
 
+### F-012 – Mailserver-Einstellungen (Grundlage für späteres Passwort-Zurücksetzen)
+
+SMTP-Einstellungen liegen in MySQL (Tabelle `MailEinstellungen`, Singleton-Datensatz `Id = 1`, Check-Constraint) und werden beim ersten Start sowie unter Einstellungen > Mailserver (nur Administration) gepflegt. Passwort-Zurücksetzen selbst (E-Mails, Endpunkte) ist **nicht** Teil dieser Anforderung.
+
+**Abnahmekriterien:**
+- Spalten: `Id`, `SmtpHost`, `SmtpPort`, `Benutzername`, `PasswortVerschluesselt`, `AbsenderEmail`, `AbsenderName`, `SslModus` (`Keine`/`StartTls`/`SslBeiVerbindung`), `Aktiv`, `Konfiguriert`, `LetzterTestAm`, `ErstelltAm`, `GeaendertAm`. Migration `AddMailEinstellungen` (additiv, kein `DROP`).
+- Einrichtungsreihenfolge: 1. Datenbank (`/Setup`), 2. Mailserver (`/Setup/Mail`), 3. erster Administrator (`/Setup/Admin`), 4. Anmeldung. Fehlen gültige Mail-Einstellungen, leiten alle Seiten (außer Theme/statische Dateien) auf `/Setup/Mail` um; nach Abschluss ist die Seite nicht mehr erreichbar. Keine Weiterleitungsschleifen.
+- Gespeichert wird nur nach erfolgreichem SMTP-Test (Verbindung, TLS, ggf. Anmeldung; es wird keine E-Mail versendet). Fehlgeschlagene Tests speichern nichts; Meldungen sind deutsch und enthalten weder Passwort noch Ausnahmetexte; Logs enthalten nur Fehlerkategorie und Ausnahmetyp.
+- Anmeldedaten sind nur mit STARTTLS oder SSL/TLS zulässig. Verbindungsaufbau und Test sind auf 10 Sekunden begrenzt.
+- Das Passwort wird mit ASP.NET Core Data Protection (Purpose `Kanzlei.Web.MailSettings.Password.v1`, persistierter Schlüsselbund) verschlüsselt in MySQL gespeichert; Klartext und Chiffrat werden nie an die Oberfläche ausgegeben. Zugriff auf Datenbank **und** Schlüsselbund ermöglicht die Wiederherstellung des Passworts.
+- Unauthentifizierte Ersteinrichtung ist ausdrücklich so festgelegt (es gibt noch kein Konto, wie bei der Datenbank-Einrichtung): nur im Status „Mailserver fehlt“, danach 404/Weiterleitung. Anti-Forgery, 8-KB-Größenlimit und Rate-Limit (20/Minute je IP) gelten.
+- Bearbeiten unter Einstellungen > Mailserver: serverseitig nur Administration (alle Aktionen), Anti-Forgery; leeres Passwortfeld behält das gespeicherte Passwort; Test vor Speichern.
+- Kann das Passwort nicht entschlüsselt werden (z. B. Schlüsselbund fehlt), wird fail-closed gemeldet (Statusseite bzw. HTTP 503 auf der Bearbeitungsseite) und der Datensatz nie überschrieben. Ist der SMTP-Server vorübergehend nicht erreichbar, bleiben die Einstellungen unverändert und die Anwendung läuft weiter; nur der Test schlägt fehl.
+- Bekannte Grenzen: Erreichbarkeit des Mailservers wird nicht beim Start geprüft; `Aktiv` wird derzeit immer auf Ja gesetzt; kein Test mit echtem SMTP-/MySQL-Server in CI; nur Einzelinstanzbetrieb.
+
 ## 6. Demo-Abnahmeszenario
 
 1. Demo-Administration anmelden.
@@ -211,6 +226,7 @@ Bei jeder Anforderungsänderung wird ein neuer Eintrag mit Datum und Dokumentver
 | 1.3 | 2026-10-11 | Dateibasierte Persistenz des Farbthemas: CSS-Datei `App_Data/theme.css` (konfigurierbar über `THEME_CSS_FILE`), atomares Schreiben, strenge Validierung beim Laden mit sicherem Fallback auf Standardfarben; Einstellungen überstehen Neustarts. Nur Einzelinstanzbetrieb. Ersetzt die rein flüchtige Speicherung aus v1.2. | F-009 |
 | 1.4 | 2026-10-11 | MySQL-Anbindung: Ersteinrichtung vor der Anmeldung, Test-vor-Speichern, Passwort per Data Protection verschlüsselt in `App_Data/db-settings.json` mit persistiertem Schlüsselbund, EF-Core-Kontext (Pomelo 8.0.3) mit initialer Migration, automatische Migration beim Start, Status-/Wiederherstellungsseite. Ergänzt F-007 (Datenbank für spätere Fachdaten; Demo-Benutzer und Theme-Datei unverändert). Nur Einzelinstanzbetrieb. | F-007, F-010 |
 | 1.5 | 2026-10-11 | Benutzerverwaltung: Tabelle `Benutzer` (Migration `AddBenutzer`), Passwort als gesalzener Einweg-Hash statt umkehrbarer Verschlüsselung, Ersteinrichtung des ersten Administrators über `/Setup/Admin` (keine festen Zugangsdaten), Anmeldung gegen die Datenbank, Menü Einstellungen > Benutzer, Deaktivieren statt Löschen, Schutz des letzten Administrators, Sitzungsende bei Deaktivierung. Löst die festen Demo-Benutzer aus v1.1 (F-001) ab; frühere Einträge bleiben unverändert. | F-001, F-004, F-007, F-011 |
+| 1.6 | 2026-10-11 | Mailserver-Einstellungen: Tabelle `MailEinstellungen` (Migration `AddMailEinstellungen`), Ersteinrichtung `/Setup/Mail` zwischen Datenbank und Administrator, Test-vor-Speichern (MailKit), Passwort per Data Protection verschlüsselt, Einstellungen > Mailserver (nur Administration), fail-closed bei nicht entschlüsselbarem Passwort. Kein Passwort-Zurücksetzen. | F-010, F-011, F-012 |
 
 ### Vorlage für künftige Änderungsprotokolleinträge
 

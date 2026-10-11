@@ -1,0 +1,36 @@
+@model MailSetupViewModel
+@{
+    ViewData["Title"] = "Mailserver";
+}
+
+<div class="row">
+    <div class="col-12 col-lg-8 col-xl-6">
+        <h1 class="h3 mb-3">Mailserver</h1>
+        <p class="text-muted">SMTP-Einstellungen für den späteren Versand von Passwort-Zurücksetzen-E-Mails. Änderungen werden erst nach erfolgreichem Verbindungstest gespeichert.</p>
+
+        @if (TempData["Success"] is string ok)
+        {
+            <div class="alert alert-success" role="alert">@ok</div>
+        }
+        @if (!string.IsNullOrEmpty(Model.ResultMessage))
+        {
+            <div class="alert @(Model.ResultSuccess ? "alert-success" : "alert-danger")" role="alert">@Model.ResultMessage</div>
+        }
+
+        @if (ViewData["Unreadable"] is true)
+        {
+            <p>Die gespeicherten Mailserver-Einstellungen können nicht gelesen oder entschlüsselt werden (z. B. fehlender Schlüsselbund). Sie wurden nicht verändert. Bitte stellen Sie den Schlüsselbund aus der Datensicherung wieder her (siehe README, Abschnitt „Mailserver“) und laden Sie die Seite neu.</p>
+            <a class="btn btn-primary" asp-action="Mailserver">Erneut versuchen</a>
+        }
+        else
+        {
+            <form asp-action="Mailserver" method="post" autocomplete="off">
+                <partial name="_MailFields" model="Model" />
+                <div class="d-flex flex-wrap gap-2 mt-4">
+                    <button type="submit" asp-action="MailserverTest" class="btn btn-outline-primary">Verbindung testen</button>
+                    <button type="submit" class="btn btn-primary">Testen und speichern</button>
+                </div>
+            </form>
+        }
+    </div>
+</div>
