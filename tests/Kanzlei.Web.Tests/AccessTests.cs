@@ -104,6 +104,10 @@ public class AccessTests : IClassFixture<TestAppFactory>
         var client = await LoginAsync(Fixtures.AdminEmail, Fixtures.AdminPassword);
         var html = await client.GetStringAsync("/Einstellungen");
         Assert.Contains("einstellungen-kacheln", html);
+        Assert.Contains("\"columns\": 3.0", html);
+        Assert.DoesNotContain("\"row\":", html);
+        Assert.DoesNotContain("\"col\": 0", html);
+        Assert.Equal(new[] { "\"col\": 1,", "\"col\": 2," }, System.Text.RegularExpressions.Regex.Matches(html, "\"col\": \\d+,").Select(m => m.Value).ToArray());
         Assert.DoesNotContain("Platzhalter", html);
         foreach (var (href, title) in new[] { ("/Einstellungen/Layout", "Layout"), ("/Benutzer", "Benutzer"), ("/Einstellungen/Mailserver", "Mailserver") })
         {
