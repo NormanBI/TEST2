@@ -1,4 +1,7 @@
+using Microsoft.AspNetCore.Authentication;
+using Kanzlei.Web.Data;
 using Kanzlei.Web.Services;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using System.Threading.RateLimiting;
@@ -26,6 +29,18 @@ builder.Services
         options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
         options.ExpireTimeSpan = TimeSpan.FromHours(1);
         options.SlidingExpiration = false;
+        // Sitzungen deaktivierter (oder nicht mehr vorhandener) Benutzer werden bei der nächsten Anfrage beendet.
+        options.Events.OnValidatePrincipal = async context =>
+        {
+            var idClaim = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var active = int.TryParse(idClaim, out var id)
+                && await context.HttpContext.RequestServices.GetRequiredService<IBenutzerStore>().IsActiveAsync(id, context.HttpContext.RequestAborted);
+            if (!active)
+            {
+                context.RejectPrincipal();
+                await context.HttpContext.SignOutAsync(Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme);
+            }
+        };
     });
 
 builder.Services.AddAuthorization(options =>
@@ -61,6 +76,9 @@ builder.Services.AddDataProtection()
 builder.Services.AddSingleton<IDbSettingsStore>(sp =>
     new DbSettingsStore(dbConfigPath, sp.GetRequiredService<IDataProtectionProvider>(), sp.GetRequiredService<ILogger<DbSettingsStore>>()));
 builder.Services.AddSingleton<IDatabaseGateway, MySqlDatabaseGateway>();
+builder.Services.AddSingleton<IPasswordHasher<Benutzer>, PasswordHasher<Benutzer>>();
+builder.Services.AddSingleton<IAppDbContextFactory, MySqlAppDbContextFactory>();
+builder.Services.AddSingleton<IBenutzerStore, EfBenutzerStore>();
 builder.Services.AddSingleton<IDatabaseState, DatabaseState>();
 
 builder.Services.AddRateLimiter(o =>
