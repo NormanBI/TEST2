@@ -78,13 +78,13 @@ public class ThemeServiceTests
     }
 }
 
-public class ThemeEndpointTests : IClassFixture<WebApplicationFactory<Program>>
+public class ThemeEndpointTests : IClassFixture<TestAppFactory>
 {
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly TestAppFactory _factory;
 
-    public ThemeEndpointTests(WebApplicationFactory<Program> factory) => _factory = factory;
+    public ThemeEndpointTests(TestAppFactory factory) => _factory = factory;
 
-    private HttpClient NewClient(WebApplicationFactory<Program>? f = null) => (f ?? _factory).CreateClient(new WebApplicationFactoryClientOptions
+    private HttpClient NewClient(TestAppFactory? f = null) => (f ?? _factory).CreateClient(new WebApplicationFactoryClientOptions
     {
         AllowAutoRedirect = false,
         HandleCookies = true,
@@ -96,7 +96,7 @@ public class ThemeEndpointTests : IClassFixture<WebApplicationFactory<Program>>
         return Regex.Match(html, "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"").Groups[1].Value;
     }
 
-    private async Task<HttpClient> LoginAsync(string user, string password, WebApplicationFactory<Program>? f = null)
+    private async Task<HttpClient> LoginAsync(string user, string password, TestAppFactory? f = null)
     {
         var client = NewClient(f);
         var token = await TokenAsync(client, "/Account/Login");
@@ -132,7 +132,7 @@ public class ThemeEndpointTests : IClassFixture<WebApplicationFactory<Program>>
     [InlineData("sachbearbeiter", "Demo-Sachbearbeiter-1")]
     public async Task Layout_NonAdmin_IsDeniedOnGetAndPost_AndThemeUnchanged(string user, string password)
     {
-        using var factory = new WebApplicationFactory<Program>();
+        using var factory = new TestAppFactory();
         var client = await LoginAsync(user, password, factory);
         var token = await TokenAsync(client, "/");
 
@@ -154,7 +154,7 @@ public class ThemeEndpointTests : IClassFixture<WebApplicationFactory<Program>>
     [Fact]
     public async Task Admin_SeesLayoutMenu_AndPage()
     {
-        using var factory = new WebApplicationFactory<Program>();
+        using var factory = new TestAppFactory();
         var client = await LoginAsync("admin", "Demo-Admin-1", factory);
         Assert.Contains(">Layout<", await client.GetStringAsync("/"));
         var page = await client.GetStringAsync("/Einstellungen/Layout");
@@ -166,7 +166,7 @@ public class ThemeEndpointTests : IClassFixture<WebApplicationFactory<Program>>
     [Fact]
     public async Task Admin_AppliesTheme_SharedWithOtherUsers_ThenResets()
     {
-        using var factory = new WebApplicationFactory<Program>();
+        using var factory = new TestAppFactory();
         var admin = await LoginAsync("admin", "Demo-Admin-1", factory);
         var other = await LoginAsync("steuerberater", "Demo-Steuerberater-1", factory);
 
@@ -190,7 +190,7 @@ public class ThemeEndpointTests : IClassFixture<WebApplicationFactory<Program>>
     [Fact]
     public async Task Admin_InvalidColor_IsRejected_AndNotDelivered()
     {
-        using var factory = new WebApplicationFactory<Program>();
+        using var factory = new TestAppFactory();
         var admin = await LoginAsync("admin", "Demo-Admin-1", factory);
         var token = await TokenAsync(admin, "/Einstellungen/Layout");
         var response = await admin.PostAsync("/Einstellungen/Layout",
@@ -204,7 +204,7 @@ public class ThemeEndpointTests : IClassFixture<WebApplicationFactory<Program>>
     [Fact]
     public async Task Post_WithoutAntiforgeryToken_IsRejected()
     {
-        using var factory = new WebApplicationFactory<Program>();
+        using var factory = new TestAppFactory();
         var admin = await LoginAsync("admin", "Demo-Admin-1", factory);
         var form = ThemeService.Defaults().ToDictionary(p => $"values[{p.Key}]", p => p.Value);
         var response = await admin.PostAsync("/Einstellungen/Layout", new FormUrlEncodedContent(form));

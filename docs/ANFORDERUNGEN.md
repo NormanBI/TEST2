@@ -139,6 +139,17 @@ Unter **Einstellungen > Layout** (`/Einstellungen/Layout`) kann die Administrati
 - **Zurücksetzen:** „Auf Standard zurücksetzen“ stellt sofort alle Standardwerte (siehe Palette) für alle Benutzer wieder her.
 - Automatisierte Tests: Autorisierung (inkl. Direktzugriff Nicht-Administration), Farbvalidierung, Anwenden/Zurücksetzen, CSS-/Theme-Auslieferung (`tests/Kanzlei.Web.Tests/ThemeTests.cs`), Persistenz/Neustart/Korruptionsschutz (`ThemePersistenceTests.cs`).
 
+### F-010 – MySQL-Anbindung und Ersteinrichtung
+
+Die Anwendung fragt ohne gültige MySQL-Konfiguration vor der Anmeldung die Verbindungsparameter ab, speichert sie nach erfolgreichem Test verschlüsselt und nutzt MySQL (EF Core 8, Pomelo) als Persistenzgrundlage.
+
+**Abnahmekriterien:**
+- Ohne Konfiguration führen alle Seiten (inkl. Anmeldung) auf `/Setup`; Formular auf Deutsch, responsiv, mit Validierung, Verbindungstest, SSL-Option und sicheren Fehlermeldungen ohne Zugangsdaten.
+- Gespeichert wird nur nach erfolgreichem Test und erfolgreicher Migration; das Passwort ist mit Data Protection verschlüsselt, der Schlüsselbund ist persistiert; Pfade konfigurierbar (Standard `App_Data`).
+- Nach der Einrichtung ist `/Setup` nicht mehr erreichbar; Neukonfiguration nur lokal durch Löschen der Konfigurationsdatei (dokumentiert in README).
+- Beim Start: Laden, Verbindungsprüfung, automatische Migrationen. Unlesbare Konfiguration oder nicht erreichbarer Server führen zu einer Status-/Wiederherstellungsseite statt zur Anmeldung und überschreiben nichts.
+- Farbthema (F-009) und Demo-Benutzer (F-001) bleiben unverändert und unabhängig von MySQL. Annahmen: Einzelinstanz, lokales Dateisystem.
+
 ## 6. Demo-Abnahmeszenario
 
 1. Demo-Administration anmelden.
@@ -184,6 +195,7 @@ Bei jeder Anforderungsänderung wird ein neuer Eintrag mit Datum und Dokumentver
 | 1.1 | 2026-10-11 | Prototyp umgesetzt (siehe README). Entscheidungen zu Abschnitt 8: Demo-Zugänge `admin`, `steuerberater`, `sachbearbeiter` (Passwörter im README); Cookie-Authentifizierung mit festen Demo-Benutzern und serverseitiger Rollenprüfung; Kalender = Syncfusion `ejs-calendar` ohne Termine; Platzhaltertext „Platzhalter – diese Funktion ist im ersten Prototyp noch nicht umgesetzt.“; Standardfarben Primär `#1f4e79`, Hintergrund `#f5f7fa`, Text `#212529`. | F-001 bis F-009 |
 | 1.2 | 2026-10-11 | Layout-Editor unter Einstellungen > Layout (nur Administration): semantische CSS-Variablen, strikte Hex-Validierung, Übernehmen/Zurücksetzen, gemeinsames Thema ausschließlich im Arbeitsspeicher (Reset bei Neustart, bewusst keine Datenbank, kein Schreiben in wwwroot). Ablösung der Abgrenzung „Einstellbare und gespeicherte Farben“ für den flüchtigen Fall; dauerhafte Speicherung bleibt später. | F-004, F-008, F-009 |
 | 1.3 | 2026-10-11 | Dateibasierte Persistenz des Farbthemas: CSS-Datei `App_Data/theme.css` (konfigurierbar über `THEME_CSS_FILE`), atomares Schreiben, strenge Validierung beim Laden mit sicherem Fallback auf Standardfarben; Einstellungen überstehen Neustarts. Nur Einzelinstanzbetrieb. Ersetzt die rein flüchtige Speicherung aus v1.2. | F-009 |
+| 1.4 | 2026-10-11 | MySQL-Anbindung: Ersteinrichtung vor der Anmeldung, Test-vor-Speichern, Passwort per Data Protection verschlüsselt in `App_Data/db-settings.json` mit persistiertem Schlüsselbund, EF-Core-Kontext (Pomelo 8.0.3) mit initialer Migration, automatische Migration beim Start, Status-/Wiederherstellungsseite. Ergänzt F-007 (Datenbank für spätere Fachdaten; Demo-Benutzer und Theme-Datei unverändert). Nur Einzelinstanzbetrieb. | F-007, F-010 |
 
 ### Vorlage für künftige Änderungsprotokolleinträge
 

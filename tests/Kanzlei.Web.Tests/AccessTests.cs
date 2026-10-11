@@ -4,11 +4,11 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Kanzlei.Web.Tests;
 
-public class AccessTests : IClassFixture<WebApplicationFactory<Program>>
+public class AccessTests : IClassFixture<TestAppFactory>
 {
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly TestAppFactory _factory;
 
-    public AccessTests(WebApplicationFactory<Program> factory) => _factory = factory;
+    public AccessTests(TestAppFactory factory) => _factory = factory;
 
     private HttpClient NewClient() => _factory.CreateClient(new WebApplicationFactoryClientOptions
     {

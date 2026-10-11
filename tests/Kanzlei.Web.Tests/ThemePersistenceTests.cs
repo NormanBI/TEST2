@@ -116,7 +116,7 @@ public sealed class ThemePersistenceTests : IDisposable
         var seed = new ThemeService(path);
         seed.TryApply(Values("#0a0b0c"), out _);
 
-        using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
+        using var factory = new TestAppFactory().WithWebHostBuilder(b =>
             b.UseSetting("THEME_CSS_FILE", path));
         var client = factory.CreateClient();
         var response = await client.GetAsync("/theme.css");

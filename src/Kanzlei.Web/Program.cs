@@ -1,5 +1,7 @@
 using Kanzlei.Web.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
+using System.Threading.RateLimiting;
 using Syncfusion.Licensing;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -45,6 +47,30 @@ builder.Services.AddSingleton<IThemeService>(sp =>
     return new ThemeService(path, sp.GetRequiredService<ILogger<ThemeService>>());
 });
 
+// Datenbank-Konfiguration (DB_CONFIG_FILE / Database:ConfigFile) und Data-Protection-Schlüsselbund (DATAPROTECTION_KEYS_PATH / DataProtection:KeysPath);
+// Standard unter App_Data im Content-Root, nie unter wwwroot.
+string ResolvePath(string? configured, params string[] defaultParts) => string.IsNullOrWhiteSpace(configured)
+    ? Path.Combine(new[] { builder.Environment.ContentRootPath }.Concat(defaultParts).ToArray())
+    : Path.GetFullPath(configured, builder.Environment.ContentRootPath);
+var dbConfigPath = ResolvePath(builder.Configuration["Database:ConfigFile"] ?? builder.Configuration["DB_CONFIG_FILE"], "App_Data", "db-settings.json");
+var keysPath = ResolvePath(builder.Configuration["DataProtection:KeysPath"] ?? builder.Configuration["DATAPROTECTION_KEYS_PATH"], "App_Data", "keys");
+
+builder.Services.AddDataProtection()
+    .SetApplicationName("Kanzlei.Web")
+    .PersistKeysToFileSystem(new DirectoryInfo(keysPath));
+builder.Services.AddSingleton<IDbSettingsStore>(sp =>
+    new DbSettingsStore(dbConfigPath, sp.GetRequiredService<IDataProtectionProvider>(), sp.GetRequiredService<ILogger<DbSettingsStore>>()));
+builder.Services.AddSingleton<IDatabaseGateway, MySqlDatabaseGateway>();
+builder.Services.AddSingleton<IDatabaseState, DatabaseState>();
+
+builder.Services.AddRateLimiter(o =>
+{
+    o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    o.AddPolicy("setup", ctx => RateLimitPartition.GetFixedWindowLimiter(
+        ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 20, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+});
+
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
@@ -54,12 +80,18 @@ if (!app.Environment.IsDevelopment())
 
 app.UseStaticFiles();
 app.UseRouting();
+app.UseRateLimiter();
+app.UseMiddleware<DatabaseGateMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
+
+// Beim Start Konfiguration laden und Migrationen anwenden; Fehler blockieren den Start nicht (Status-/Setup-Seite).
+try { await app.Services.GetRequiredService<IDatabaseState>().EnsureReadyAsync(CancellationToken.None); }
+catch (Exception ex) { app.Logger.LogError("Datenbankinitialisierung beim Start fehlgeschlagen ({ExceptionType}).", ex.GetType().Name); }
 
 app.Run();
 
