@@ -6,13 +6,13 @@ namespace Kanzlei.Web.Services;
 
 public sealed record ThemeToken(string Key, string Label, string CssVariable, string Default, string Hint);
 
-// Gemeinsames, nur im Arbeitsspeicher gehaltenes Farbthema (keine Persistenz; Reset beim Neustart).
+// Gemeinsames Farbthema; wird (falls ein Dateipfad konfiguriert ist) als CSS-Datei außerhalb von wwwroot gespeichert.
 public interface IThemeService
 {
     IReadOnlyList<ThemeToken> Tokens { get; }
     IReadOnlyDictionary<string, string> Current { get; }
     bool TryApply(IReadOnlyDictionary<string, string?> values, out Dictionary<string, string> errors);
-    void Reset();
+    bool Reset();
     string BuildCss();
 }
 
@@ -35,8 +35,30 @@ public sealed partial class ThemeService : IThemeService
         new ThemeToken("calendar", "Kalender: heute/Auswahl", "--app-calendar", "#1f4e79", "Heutiger Tag und gewählter Tag"),
     };
 
+    public const string PersistErrorKey = "_persist";
+    private const int MaxFileBytes = 16 * 1024;
+    private static readonly ThemeToken[] DerivedTokens =
+    {
+        new("primary-contrast", "", "--app-primary-contrast", "", ""),
+        new("calendar-contrast", "", "--app-calendar-contrast", "", ""),
+    };
+
     private readonly object _lock = new();
+    private readonly string? _filePath;
+    private readonly ILogger? _logger;
     private IReadOnlyDictionary<string, string> _current = Defaults();
+
+    // Ohne Dateipfad: rein flüchtig (Arbeitsspeicher).
+    public ThemeService() { }
+
+    public ThemeService(string? filePath, ILogger? logger = null)
+    {
+        _filePath = string.IsNullOrWhiteSpace(filePath) ? null : Path.GetFullPath(filePath);
+        _logger = logger;
+        if (_filePath != null) _current = LoadOrDefaults();
+    }
+
+    public string? FilePath => _filePath;
 
     public IReadOnlyList<ThemeToken> Tokens => TokenList;
 
@@ -69,18 +91,137 @@ public sealed partial class ThemeService : IThemeService
             next[token.Key] = value!.ToLowerInvariant();
         }
         if (errors.Count > 0) return false;
-        lock (_lock) { _current = next; }
+        lock (_lock)
+        {
+            if (!TryPersist(next))
+            {
+                errors[PersistErrorKey] = "Die Farben konnten nicht dauerhaft gespeichert werden und wurden nicht übernommen.";
+                return false;
+            }
+            _current = next;
+        }
         return true;
     }
 
-    public void Reset()
+    // Persistiert die Standardfarben; bei Schreibfehler bleibt das bisherige Thema aktiv und false wird geliefert.
+    public bool Reset()
     {
-        lock (_lock) { _current = Defaults(); }
+        lock (_lock)
+        {
+            var defaults = Defaults();
+            if (!TryPersist(defaults)) return false;
+            _current = defaults;
+            return true;
+        }
     }
 
-    public string BuildCss()
+    private bool TryPersist(IReadOnlyDictionary<string, string> theme)
     {
-        var theme = Current;
+        if (_filePath == null) return true;
+        string? tmp = null;
+        try
+        {
+            var dir = Path.GetDirectoryName(_filePath)!;
+            Directory.CreateDirectory(dir);
+            tmp = Path.Combine(dir, $".{Path.GetFileName(_filePath)}.{Guid.NewGuid():N}.tmp");
+            File.WriteAllText(tmp, BuildDocument(theme), new UTF8Encoding(false));
+            File.Move(tmp, _filePath, overwrite: true);
+            tmp = null;
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
+        {
+            _logger?.LogError(ex, "Theme-Datei {Path} konnte nicht geschrieben werden.", _filePath);
+            return false;
+        }
+        finally
+        {
+            if (tmp != null)
+            {
+                try { File.Delete(tmp); } catch (Exception) { /* Aufräumen nach Fehler, best effort */ }
+            }
+        }
+    }
+
+    private Dictionary<string, string> LoadOrDefaults()
+    {
+        try
+        {
+            var info = new FileInfo(_filePath!);
+            if (!info.Exists)
+            {
+                _logger?.LogInformation("Keine Theme-Datei unter {Path}; Standardfarben werden verwendet.", _filePath);
+                return Defaults();
+            }
+            if (info.Length > MaxFileBytes)
+            {
+                _logger?.LogWarning("Theme-Datei {Path} ist zu groß; Standardfarben werden verwendet.", _filePath);
+                return Defaults();
+            }
+            if (TryParse(File.ReadAllText(_filePath!), out var theme, out var problem))
+            {
+                _logger?.LogInformation("Theme aus {Path} geladen.", _filePath);
+                return theme;
+            }
+            _logger?.LogWarning("Theme-Datei {Path} ist ungültig ({Problem}); Standardfarben werden verwendet.", _filePath, problem);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _logger?.LogWarning(ex, "Theme-Datei {Path} nicht lesbar; Standardfarben werden verwendet.", _filePath);
+        }
+        return Defaults();
+    }
+
+    // Strenger Parser: erlaubt nur ":root {", "}", einzeilige Kommentare und bekannte "--app-*: #rrggbb;"-Deklarationen.
+    public static bool TryParse(string css, out Dictionary<string, string> theme, out string problem)
+    {
+        theme = new Dictionary<string, string>();
+        problem = "";
+        var byVar = TokenList.ToDictionary(t => t.CssVariable, t => t.Key);
+        var derived = DerivedTokens.ToDictionary(t => t.CssVariable);
+        var seen = new HashSet<string>();
+        var open = false;
+        var closed = false;
+        foreach (var raw in css.Split('\n'))
+        {
+            var line = raw.Trim();
+            if (line.Length == 0) continue;
+            if (closed) { problem = "Inhalt nach Blockende"; return false; }
+            if (line.StartsWith("/*", StringComparison.Ordinal) && line.EndsWith("*/", StringComparison.Ordinal)
+                && line.Length >= 4 && !line.AsSpan(2, line.Length - 4).Contains("*/", StringComparison.Ordinal))
+                continue;
+            if (!open)
+            {
+                if (line != ":root {") { problem = "Unerwarteter Selektor"; return false; }
+                open = true;
+                continue;
+            }
+            if (line == "}") { closed = true; continue; }
+            var m = DeclarationPattern().Match(line);
+            if (!m.Success) { problem = "Unbekannte oder ungültige Deklaration"; return false; }
+            var name = m.Groups[1].Value;
+            var value = m.Groups[2].Value.ToLowerInvariant();
+            if (!seen.Add(name)) { problem = $"Doppelte Variable {name}"; return false; }
+            if (byVar.TryGetValue(name, out var key)) theme[key] = value;
+            else if (!derived.ContainsKey(name)) { problem = $"Unbekannte Variable {name}"; return false; }
+        }
+        if (!open || !closed) { problem = "Unvollständiger Block"; return false; }
+        var found = theme;
+        var missing = TokenList.FirstOrDefault(t => !found.ContainsKey(t.Key));
+        if (missing != null) { problem = $"Variable {missing.CssVariable} fehlt"; return false; }
+        return true;
+    }
+
+    [GeneratedRegex(@"^(--app-[a-z-]+):\s*(#[0-9a-fA-F]{6});$")]
+    private static partial Regex DeclarationPattern();
+
+    private static string BuildDocument(IReadOnlyDictionary<string, string> theme) =>
+        "/* Generiert vom Layout-Editor (Einstellungen > Layout). Nicht manuell bearbeiten. */\n" + BuildCss(theme);
+
+    public string BuildCss() => BuildCss(Current);
+
+    private static string BuildCss(IReadOnlyDictionary<string, string> theme)
+    {
         var sb = new StringBuilder(":root {\n");
         foreach (var token in TokenList)
         {

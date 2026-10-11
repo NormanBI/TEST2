@@ -23,7 +23,7 @@ public class EinstellungenController : Controller
     {
         if (_theme.TryApply(values, out var errors))
         {
-            TempData["Success"] = "Farben wurden übernommen. Sie gelten für alle Benutzer, bis die Anwendung neu gestartet wird.";
+            TempData["Success"] = "Farben wurden übernommen. Sie gelten für alle Benutzer und bleiben auch nach einem Neustart der Anwendung erhalten.";
             return RedirectToAction(nameof(Layout));
         }
         var model = new LayoutViewModel(_theme.Current, values, errors);
@@ -34,8 +34,10 @@ public class EinstellungenController : Controller
     [HttpPost]
     public IActionResult LayoutReset()
     {
-        _theme.Reset();
-        TempData["Success"] = "Die Standardfarben wurden wiederhergestellt.";
+        if (_theme.Reset())
+            TempData["Success"] = "Die Standardfarben wurden wiederhergestellt.";
+        else
+            TempData["Error"] = "Die Standardfarben konnten nicht dauerhaft gespeichert werden; das bisherige Thema bleibt aktiv.";
         return RedirectToAction(nameof(Layout));
     }
 }
