@@ -101,6 +101,7 @@ public class TestAppFactory : WebApplicationFactory<Program>
     {
         if (_seeded) return;
         _seeded = true;
+        using (var db = Contexts.Create()) db.Database.EnsureCreated(); // legt nur die HasData-Demomandanten an
         if (SeedMail) Contexts.AddMail();
         if (!SeedUsers) return;
         Contexts.Add("Ada", "Admin", Fixtures.AdminEmail, Fixtures.AdminPassword, administrator: true);

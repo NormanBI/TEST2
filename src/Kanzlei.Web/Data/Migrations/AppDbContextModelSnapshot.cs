@@ -99,6 +99,36 @@ namespace Kanzlei.Web.Data.Migrations
                     b.ToTable("Benutzer", (string)null);
                 });
 
+            modelBuilder.Entity("Kanzlei.Web.Data.BenutzerDashboardLayout", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("BenutzerId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("ErstelltAm")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("GeaendertAm")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("LayoutJson")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("varchar(2000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BenutzerId")
+                        .IsUnique();
+
+                    b.ToTable("BenutzerDashboardLayouts", (string)null);
+                });
+
             modelBuilder.Entity("Kanzlei.Web.Data.Einstellungen", b =>
                 {
                     b.Property<int>("Id")
@@ -184,6 +214,159 @@ namespace Kanzlei.Web.Data.Migrations
                         {
                             t.HasCheckConstraint("CK_MailEinstellungen_Singleton", "`Id` = 1");
                         });
+                });
+
+            modelBuilder.Entity("Kanzlei.Web.Data.MasterClient", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(450)
+                        .HasColumnType("varchar(450)")
+                        .HasColumnName("id");
+
+                    b.Property<string>("ClientSince")
+                        .HasColumnType("longtext")
+                        .HasColumnName("client_since");
+
+                    b.Property<string>("ClientTo")
+                        .HasColumnType("longtext")
+                        .HasColumnName("client_to");
+
+                    b.Property<string>("DifferingName")
+                        .HasColumnType("longtext")
+                        .HasColumnName("differing_name");
+
+                    b.Property<string>("EstablishmentAreaId")
+                        .HasColumnType("longtext")
+                        .HasColumnName("establishment_area_id");
+
+                    b.Property<string>("EstablishmentId")
+                        .HasColumnType("longtext")
+                        .HasColumnName("establishment_id");
+
+                    b.Property<string>("EstablishmentName")
+                        .HasColumnType("longtext")
+                        .HasColumnName("establishment_name");
+
+                    b.Property<int?>("EstablishmentNumber")
+                        .HasColumnType("int")
+                        .HasColumnName("establishment_number");
+
+                    b.Property<string>("EstablishmentShortName")
+                        .HasColumnType("longtext")
+                        .HasColumnName("establishment_short_name");
+
+                    b.Property<string>("FunctionalAreaId")
+                        .HasColumnType("longtext")
+                        .HasColumnName("functional_area_id");
+
+                    b.Property<string>("FunctionalAreaName")
+                        .HasColumnType("longtext")
+                        .HasColumnName("functional_area_name");
+
+                    b.Property<string>("FunctionalAreaShortName")
+                        .HasColumnType("longtext")
+                        .HasColumnName("functional_area_short_name");
+
+                    b.Property<string>("LegalPersonId")
+                        .HasColumnType("longtext")
+                        .HasColumnName("legal_person_id");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("name");
+
+                    b.Property<string>("NaturalPersonId")
+                        .HasColumnType("longtext")
+                        .HasColumnName("natural_person_id");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("longtext")
+                        .HasColumnName("note");
+
+                    b.Property<long>("Number")
+                        .HasColumnType("bigint")
+                        .HasColumnName("number");
+
+                    b.Property<string>("OrganizationId")
+                        .HasColumnType("longtext")
+                        .HasColumnName("organization_id");
+
+                    b.Property<string>("OrganizationName")
+                        .HasColumnType("longtext")
+                        .HasColumnName("organization_name");
+
+                    b.Property<long?>("OrganizationNumber")
+                        .HasColumnType("bigint")
+                        .HasColumnName("organization_number");
+
+                    b.Property<string>("Status")
+                        .HasColumnType("longtext")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Timestamp")
+                        .HasColumnType("longtext")
+                        .HasColumnName("timestamp");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("type");
+
+                    b.HasKey("Id")
+                        .HasName("PK_Master_Clients");
+
+                    b.ToTable("Master_Clients", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = "demo-mandant-0001",
+                            ClientSince = "2020-01-01",
+                            EstablishmentId = "demo-est-001",
+                            EstablishmentName = "Beispielstadt",
+                            EstablishmentNumber = 1,
+                            EstablishmentShortName = "BSP",
+                            FunctionalAreaId = "demo-fa-001",
+                            FunctionalAreaName = "Finanzbuchhaltung",
+                            FunctionalAreaShortName = "FIBU",
+                            Name = "Beispiel Musterfirma GmbH",
+                            Note = "Fiktiver Beispieldatensatz",
+                            Number = 900001L,
+                            OrganizationId = "demo-org-001",
+                            OrganizationName = "Beispiel Musterfirma Gruppe",
+                            OrganizationNumber = 100001L,
+                            Status = "Aktiv",
+                            Timestamp = "2026-01-15T08:00:00",
+                            Type = "Juristische Person"
+                        },
+                        new
+                        {
+                            Id = "demo-mandant-0002",
+                            ClientSince = "2022-07-01",
+                            ClientTo = "2026-06-30",
+                            EstablishmentId = "demo-est-001",
+                            EstablishmentName = "Beispielstadt",
+                            EstablishmentNumber = 1,
+                            EstablishmentShortName = "BSP",
+                            Name = "Erika Beispielfrau",
+                            Note = "Fiktiver Beispieldatensatz",
+                            Number = 900002L,
+                            Status = "Ruhend",
+                            Timestamp = "2026-02-20T09:30:00",
+                            Type = "Natürliche Person"
+                        });
+                });
+
+            modelBuilder.Entity("Kanzlei.Web.Data.BenutzerDashboardLayout", b =>
+                {
+                    b.HasOne("Kanzlei.Web.Data.Benutzer", "Benutzer")
+                        .WithMany()
+                        .HasForeignKey("BenutzerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Benutzer");
                 });
 #pragma warning restore 612, 618
         }
