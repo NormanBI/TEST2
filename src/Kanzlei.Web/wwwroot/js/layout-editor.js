@@ -3,7 +3,7 @@
   var preview = document.getElementById('themePreview');
   var hint = document.getElementById('contrastHint');
   var form = document.getElementById('layoutForm');
-  if (!preview || !form) return;
+  if (!preview || !form || !hint) return;
 
   function lum(hex) {
     var ch = [1, 3, 5].map(function (i) {
