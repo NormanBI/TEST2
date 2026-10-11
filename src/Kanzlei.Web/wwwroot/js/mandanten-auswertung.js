@@ -22,7 +22,7 @@
 
     function setMeldung(text) { meldung.textContent = text || ''; }
 
-    function createChart(id) {
+    function createChart(id, key) {
         var chart = new ej.charts.AccumulationChart({
             series: [{
                 dataSource: [], xName: 'bezeichnung', yName: 'anzahl', type: 'Pie', innerRadius: '40%',
@@ -34,7 +34,8 @@
             enableSmartLabels: true,
             enableAnimation: false,
             enableHtmlSanitizer: true,
-            title: ''
+            title: '',
+            pointClick: function (args) { klick(key, chart, args); }
         });
         chart.appendTo('#' + id);
         return chart;
@@ -113,11 +114,8 @@
         window.setTimeout(function () { charts.status.refresh(); charts.typ.refresh(); }, 50);
     }
 
-    charts.status = createChart('chart-status');
-    charts.typ = createChart('chart-typ');
-    // Das Statusdiagramm filtert sich nach Typ (und umgekehrt): Klick im Statusdiagramm setzt den Statusfilter für das Typdiagramm.
-    charts.status.addEventListener('pointClick', function (args) { klick('status', charts.status, args); });
-    charts.typ.addEventListener('pointClick', function (args) { klick('typ', charts.typ, args); });
+    charts.status = createChart('chart-status', 'status');
+    charts.typ = createChart('chart-typ', 'typ');
 
     function klick(key, chart, args) {
         var data = chart.series[0].dataSource[args.pointIndex];

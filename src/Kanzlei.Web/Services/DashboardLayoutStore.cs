@@ -83,7 +83,7 @@ public sealed class EfDashboardLayoutStore : IDashboardLayoutStore
     {
         if (!MandantenLayout.IstGueltig(panels)) return LayoutSaveResult.Invalid;
         var json = MandantenLayout.Serialize(panels!);
-        for (var versuch = 0; ; versuch++)
+        for (var versuch = 0; versuch < 2; versuch++)
         {
             await using var db = _contexts.Create();
             if (!await db.Benutzer.AnyAsync(b => b.Id == benutzerId, ct)) return LayoutSaveResult.UserNotFound;
@@ -93,6 +93,7 @@ public sealed class EfDashboardLayoutStore : IDashboardLayoutStore
             try { await db.SaveChangesAsync(ct); return LayoutSaveResult.Ok; }
             catch (DbUpdateException) when (versuch == 0) { /* parallele Erstanlage (Unique-Index): einmal erneut als Update versuchen */ }
         }
+        throw new InvalidOperationException("Layout konnte nicht gespeichert werden.");
     }
 
     public async Task ResetAsync(int benutzerId, CancellationToken ct)

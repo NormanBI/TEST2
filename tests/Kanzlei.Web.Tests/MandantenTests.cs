@@ -71,8 +71,8 @@ public class MasterClientsSchemaTests
         Assert.Contains("CREATE TABLE `BenutzerDashboardLayouts`", up);
         Assert.DoesNotContain("DROP TABLE", up);
         Assert.DoesNotContain("ALTER TABLE `Benutzer`", up);
-        Assert.Equal(2, Regex.Matches(up, "INSERT INTO `Master_Clients`").Count == 1
-            ? Regex.Matches(up, @"\('demo-mandant-\d{4}'").Count : -1);
+        Assert.Equal(1, Regex.Matches(up, "INSERT INTO `Master_Clients`").Count);
+        Assert.Equal(2, Regex.Matches(up, @"\('demo-mandant-\d{4}'").Count);
     }
 
     [Fact]
@@ -118,7 +118,7 @@ public class MandantenAuswertungTests
         var svc = new EfMandantenAuswertungService(Create(("Aktiv", "A"), ("Aktiv", "B"), (null, "A"), ("Ruhend", "B")));
         var byStatus = (await svc.BerechnenAsync("Aktiv", null, default))!;
         Assert.Equal(new[] { ("A", 1), ("B", 1) }, byStatus.Typ.Select(k => (k.Schluessel, k.Anzahl)).ToArray());
-        Assert.Equal(3, byStatus.Status.Count == 3 ? 3 : -1); // Statusdiagramm bleibt ungefiltert
+        Assert.Equal(3, byStatus.Status.Count); // Statusdiagramm bleibt ungefiltert
         var byTyp = (await svc.BerechnenAsync(null, "B", default))!;
         Assert.Equal(new[] { ("Aktiv", 1), ("Ruhend", 1) }, byTyp.Status.Select(k => (k.Schluessel, k.Anzahl)).ToArray());
         var ohne = (await svc.BerechnenAsync("", null, default))!;
