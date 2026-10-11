@@ -28,6 +28,15 @@ public sealed class MemoryStore : IDbSettingsStore
     public DbSettingsLoadResult Load() => Result;
 }
 
+public sealed class FakeMailTester : IMailConnectionTester
+{
+    public MailTestOutcome Outcome { get; set; } = MailTestOutcome.Ok;
+    public int Calls;
+    public MailSettings? Last;
+    public Task<MailTestResult> TestAsync(MailSettings settings, CancellationToken ct)
+    { Calls++; Last = settings; return Task.FromResult(new MailTestResult(Outcome)); }
+}
+
 public static class Fixtures
 {
     public const string AdminEmail = "admin@kanzlei.test";
@@ -46,6 +55,17 @@ public sealed class InMemoryDbContextFactory : IAppDbContextFactory
     private readonly InMemoryDatabaseRoot _root = new();
     public AppDbContext Create() => new(new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(_name, _root)
         .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.CoreEventId.ManyServiceProvidersCreatedWarning)).Options);
+
+    public void AddMail(string? user = null, string? cipher = null, bool configured = true)
+    {
+        using var db = Create();
+        db.MailEinstellungen.Add(new MailEinstellungen
+        {
+            SmtpHost = "smtp.example", SmtpPort = 587, Benutzername = user, PasswortVerschluesselt = cipher,
+            AbsenderEmail = "noreply@kanzlei.test", AbsenderName = "Kanzlei", SslModus = MailSslModus.StartTls, Konfiguriert = configured,
+        });
+        db.SaveChanges();
+    }
 
     public void Add(string vorname, string nachname, string email, string password, bool administrator = false, bool steuerberater = false, bool sachbearbeiter = false)
     {
@@ -69,6 +89,8 @@ public class TestAppFactory : WebApplicationFactory<Program>
 
     public InMemoryDbContextFactory Contexts { get; } = new();
     public bool SeedUsers { get; set; } = true;
+    public bool SeedMail { get; set; } = true;
+    public FakeMailTester MailTester { get; } = new();
 
     public IBenutzerStore Users => Services.GetRequiredService<IBenutzerStore>();
 
@@ -77,8 +99,10 @@ public class TestAppFactory : WebApplicationFactory<Program>
     // Direkt vor dem Anwendungsstart seeden, damit der Start-Check bereits einen Administrator findet.
     private void SeedOnce()
     {
-        if (_seeded || !SeedUsers) return;
+        if (_seeded) return;
         _seeded = true;
+        if (SeedMail) Contexts.AddMail();
+        if (!SeedUsers) return;
         Contexts.Add("Ada", "Admin", Fixtures.AdminEmail, Fixtures.AdminPassword, administrator: true);
         Contexts.Add("Bert", "Berater", Fixtures.BeraterEmail, Fixtures.BeraterPassword, steuerberater: true);
         Contexts.Add("Sabine", "Sachbearbeiter", Fixtures.SachbearbeiterEmail, Fixtures.SachbearbeiterPassword, sachbearbeiter: true);
@@ -91,6 +115,8 @@ public class TestAppFactory : WebApplicationFactory<Program>
             s.RemoveAll<IDatabaseGateway>(); s.RemoveAll<IDbSettingsStore>(); s.RemoveAll<IDatabaseState>();
             s.RemoveAll<IAppDbContextFactory>();
             s.AddSingleton<IAppDbContextFactory>(Contexts);
+            s.RemoveAll<IMailConnectionTester>();
+            s.AddSingleton<IMailConnectionTester>(MailTester);
             s.AddSingleton<IDatabaseGateway>(Gateway);
             s.AddSingleton<IDbSettingsStore>(Store);
             s.AddSingleton<IDatabaseState, DatabaseState>();

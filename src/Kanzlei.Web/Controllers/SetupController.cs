@@ -55,6 +55,35 @@ public class SetupController : Controller
         return View(model);
     }
 
+    // Zweiter Schritt der Ersteinrichtung (nach der Datenbank, vor dem Administrator): SMTP-Mailserver.
+    // Bewusst unauthentifiziert, weil noch kein Benutzer existiert; erreichbar nur im Status MailRequired (sonst 404/Weiterleitung per Middleware).
+    [HttpGet]
+    public IActionResult Mail() => View(new MailSetupViewModel());
+
+    [HttpPost]
+    public Task<IActionResult> MailTest(MailSetupViewModel model, CancellationToken ct) => RunMail(model, save: false, ct);
+
+    [HttpPost]
+    public Task<IActionResult> Mail(MailSetupViewModel model, CancellationToken ct) => RunMail(model, save: true, ct);
+
+    private async Task<IActionResult> RunMail(MailSetupViewModel model, bool save, CancellationToken ct)
+    {
+        var settings = model.ToSettings(ModelState, storedPassword: null);
+        if (settings is not null)
+        {
+            var result = save
+                ? await _state.ConfigureMailAsync(settings, ct)
+                : await HttpContext.RequestServices.GetRequiredService<IMailConnectionTester>().TestAsync(settings, ct);
+            if (result.Success && save)
+                return _state.Status == DatabaseStatus.AdminRequired ? RedirectToAction(nameof(Admin)) : RedirectToAction("Login", "Account");
+            model.ResultSuccess = result.Success;
+            model.ResultMessage = result.Success ? "Verbindung erfolgreich. Zum Übernehmen „Testen und speichern“ wählen." : result.Message;
+        }
+        // Passwort wird nie zurück ins Formular gerendert.
+        model.ClearPassword(ModelState);
+        return View("Mail", model);
+    }
+
     [HttpGet]
     public IActionResult Status()
     {

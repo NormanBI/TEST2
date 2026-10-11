@@ -79,12 +79,17 @@ builder.Services.AddSingleton<IDatabaseGateway, MySqlDatabaseGateway>();
 builder.Services.AddSingleton<IPasswordHasher<Benutzer>, PasswordHasher<Benutzer>>();
 builder.Services.AddSingleton<IAppDbContextFactory, MySqlAppDbContextFactory>();
 builder.Services.AddSingleton<IBenutzerStore, EfBenutzerStore>();
+builder.Services.AddSingleton<IMailSettingsStore, EfMailSettingsStore>();
+builder.Services.AddSingleton<IMailConnectionTester, MailKitConnectionTester>();
 builder.Services.AddSingleton<IDatabaseState, DatabaseState>();
 
 builder.Services.AddRateLimiter(o =>
 {
     o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     o.AddPolicy("setup", ctx => RateLimitPartition.GetFixedWindowLimiter(
+        ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 20, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+    o.AddPolicy("mailtest", ctx => RateLimitPartition.GetFixedWindowLimiter(
         ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = 20, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
 });
